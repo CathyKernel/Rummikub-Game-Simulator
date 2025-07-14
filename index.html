@@ -117,6 +117,17 @@
             box-shadow: 0 0 15px rgba(102, 255, 102, 0.5);
         }
         
+        .player.current-turn {
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 0 4px rgba(255, 204, 0, 0.5);
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 204, 0, 0.7); }
+            70% { box-shadow: 0 0 0 12px rgba(255, 204, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 204, 0, 0); }
+        }
+        
         .player-header {
             display: flex;
             justify-content: space-between;
@@ -165,6 +176,7 @@
             position: relative;
             overflow: hidden;
             transition: transform 0.2s;
+            cursor: pointer;
         }
         
         .tile:hover {
@@ -186,10 +198,19 @@
             line-height: 1;
         }
         
+        .table-area {
+            min-height: 200px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+        }
+        
         .table-sets {
             display: flex;
             flex-wrap: wrap;
-            gap: 20px;
+            gap: 25px;
+            justify-content: center;
         }
         
         .set {
@@ -197,13 +218,31 @@
             border-radius: 10px;
             padding: 15px;
             min-width: 200px;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .set-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         }
         
         .set-title {
             font-size: 1.1rem;
-            margin-bottom: 10px;
             color: #66ff66;
-            text-align: center;
+        }
+        
+        .set-points {
+            background: rgba(255, 204, 0, 0.3);
+            border-radius: 15px;
+            padding: 3px 10px;
+            font-size: 0.9rem;
+            font-weight: bold;
         }
         
         .set-tiles {
@@ -225,6 +264,7 @@
             margin-bottom: 8px;
             padding-bottom: 8px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            line-height: 1.4;
         }
         
         .log-time {
@@ -240,6 +280,20 @@
             background: rgba(0, 0, 0, 0.5);
             border-radius: 10px;
             margin-top: 20px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .icebreaker-indicator {
+            background: rgba(102, 255, 102, 0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 10px;
         }
         
         .strategy-info {
@@ -253,11 +307,20 @@
             background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
             padding: 15px;
+            transition: transform 0.3s;
+        }
+        
+        .strategy-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.15);
         }
         
         .strategy-card h3 {
             color: #66ccff;
             margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .rules-container {
@@ -309,6 +372,23 @@
             font-weight: bold;
         }
         
+        .deck-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .no-sets {
+            text-align: center;
+            padding: 30px;
+            font-style: italic;
+            opacity: 0.7;
+        }
+        
         @media (max-width: 768px) {
             .player-area {
                 grid-template-columns: 1fr;
@@ -322,6 +402,16 @@
             h1 {
                 font-size: 2.2rem;
             }
+            
+            .tile {
+                width: 40px;
+                height: 55px;
+                font-size: 1rem;
+            }
+            
+            .tile-value {
+                font-size: 1.2rem;
+            }
         }
     </style>
 </head>
@@ -329,7 +419,7 @@
     <div class="container">
         <header>
             <h1>Rummikub Game Simulator</h1>
-            <p class="subtitle">A web-based implementation of the classic tile-based game with AI strategy simulation</p>
+            <p class="subtitle">Official rules implementation with icebreaker requirement and turn mechanics</p>
         </header>
         
         <div class="game-controls">
@@ -353,9 +443,11 @@
             </div>
             
             <div class="section">
-                <h2 class="section-title">Table Sets</h2>
-                <div class="table-sets" id="tableSets">
-                    <!-- Table sets will be generated here -->
+                <h2 class="section-title">Table Sets <span class="deck-info">Tiles left: <span id="tilesLeft">0</span></span></h2>
+                <div class="table-area">
+                    <div class="table-sets" id="tableSets">
+                        <div class="no-sets">No sets on the table yet. Players must break the ice first!</div>
+                    </div>
                 </div>
             </div>
             
@@ -371,19 +463,19 @@
             <h2 class="section-title">AI Strategy Implementation</h2>
             <div class="strategy-info">
                 <div class="strategy-card">
-                    <h3>Icebreaker Strategy</h3>
+                    <h3>❄️ Icebreaker Strategy</h3>
                     <p>Players must form sets totaling at least 30 points from their own tiles before playing on existing sets.</p>
                 </div>
                 <div class="strategy-card">
-                    <h3>Set Formation</h3>
+                    <h3>🔢 Set Formation</h3>
                     <p>AI prioritizes creating runs (consecutive numbers same color) and groups (same number different colors).</p>
                 </div>
                 <div class="strategy-card">
-                    <h3>Tile Management</h3>
+                    <h3>🃏 Tile Management</h3>
                     <p>AI keeps high-value tiles when possible and plays duplicates early to avoid penalty points.</p>
                 </div>
                 <div class="strategy-card">
-                    <h3>Joker Usage</h3>
+                    <h3>🎯 Joker Usage</h3>
                     <p>Jokers are used strategically to complete high-value sets when no other options are available.</p>
                 </div>
             </div>
@@ -457,6 +549,7 @@
             const tableSets = document.getElementById('tableSets');
             const gameLog = document.getElementById('gameLog');
             const statusBar = document.getElementById('statusBar');
+            const tilesLeftEl = document.getElementById('tilesLeft');
             const newGameBtn = document.getElementById('newGameBtn');
             const dealTilesBtn = document.getElementById('dealTilesBtn');
             const simulateBtn = document.getElementById('simulateBtn');
@@ -502,6 +595,8 @@
                 for (let i = 0; i < jokers; i++) {
                     state.deck.push({ number: 0, color: 'joker', isJoker: true });
                 }
+                
+                tilesLeftEl.textContent = state.deck.length;
             }
             
             // Shuffle the deck
@@ -510,6 +605,7 @@
                     const j = Math.floor(Math.random() * (i + 1));
                     [state.deck[i], state.deck[j]] = [state.deck[j], state.deck[i]];
                 }
+                tilesLeftEl.textContent = state.deck.length;
             }
             
             // Deal tiles to players
@@ -531,6 +627,7 @@
                     sortPlayerTiles(player);
                 });
                 
+                tilesLeftEl.textContent = state.deck.length;
                 updateGameLog('Tiles have been dealt to all players.');
                 updateStatusBar(`Tiles dealt. It's ${state.players[state.currentPlayer].name}'s turn`);
                 renderGame();
@@ -554,6 +651,18 @@
                 });
             }
             
+            // Draw a tile for the current player
+            function drawTile(player) {
+                if (state.deck.length > 0) {
+                    const drawnTile = state.deck.pop();
+                    player.tiles.push(drawnTile);
+                    sortPlayerTiles(player);
+                    tilesLeftEl.textContent = state.deck.length;
+                    return drawnTile;
+                }
+                return null;
+            }
+            
             // Simulate a player's move
             function simulateMove() {
                 if (!state.gameStarted) {
@@ -564,6 +673,7 @@
                 if (state.deck.length === 0) {
                     updateGameLog('Deck is empty. Game over!');
                     clearInterval(state.autoPlayInterval);
+                    endGame();
                     return;
                 }
                 
@@ -580,31 +690,43 @@
                         if (moveMade) {
                             player.hasBrokenIce = true;
                             updateGameLog(`❄️ ${player.name} broke the ice with 30+ points! ❄️`);
+                        } else {
+                            // If couldn't break ice, must draw a tile
+                            const drawnTile = drawTile(player);
+                            if (drawnTile) {
+                                updateGameLog(`${player.name} couldn't break the ice and draws a tile.`);
+                                moveMade = true;
+                            } else {
+                                updateGameLog(`${player.name} couldn't break the ice and no tiles left to draw.`);
+                            }
                         }
-                    }
-                    
-                    // Strategy 2: Try to form a new set if possible
-                    if (!moveMade) {
-                        moveMade = tryFormNewSet(player);
-                    }
-                    
-                    // Strategy 3: Try to add to existing sets (only if ice broken)
-                    if (!moveMade && player.hasBrokenIce) {
-                        moveMade = tryAddToExistingSets(player);
-                    }
-                    
-                    // Strategy 4: Try to form a group with high numbers
-                    if (!moveMade) {
-                        moveMade = tryFormHighGroup(player);
-                    }
-                    
-                    // If no move was made, draw a tile
-                    if (!moveMade) {
-                        if (state.deck.length > 0) {
-                            const drawnTile = state.deck.pop();
-                            player.tiles.push(drawnTile);
-                            sortPlayerTiles(player);
-                            updateGameLog(`${player.name} couldn't make a move and draws a tile.`);
+                    } else {
+                        // Player has already broken the ice
+                        
+                        // Strategy 2: Try to form a new set if possible
+                        if (!moveMade) {
+                            moveMade = tryFormNewSet(player);
+                        }
+                        
+                        // Strategy 3: Try to add to existing sets (only if ice broken)
+                        if (!moveMade) {
+                            moveMade = tryAddToExistingSets(player);
+                        }
+                        
+                        // Strategy 4: Try to form a group with high numbers
+                        if (!moveMade) {
+                            moveMade = tryFormHighGroup(player);
+                        }
+                        
+                        // If no move was made, draw a tile
+                        if (!moveMade) {
+                            const drawnTile = drawTile(player);
+                            if (drawnTile) {
+                                updateGameLog(`${player.name} couldn't make a move and draws a tile.`);
+                                moveMade = true;
+                            } else {
+                                updateGameLog(`${player.name} couldn't make a move and no tiles left to draw.`);
+                            }
                         }
                     }
                     
@@ -612,6 +734,7 @@
                     if (player.tiles.length === 0) {
                         updateGameLog(`🎉 ${player.name} has played all their tiles and wins the game! 🎉`);
                         clearInterval(state.autoPlayInterval);
+                        endGame();
                     }
                     
                     // Move to next player
@@ -621,10 +744,31 @@
                 }, 800);
             }
             
+            // End the game and calculate scores
+            function endGame() {
+                const winner = state.players.find(p => p.tiles.length === 0);
+                if (!winner) return;
+                
+                // Calculate scores
+                state.players.forEach(player => {
+                    if (player !== winner) {
+                        const penalty = player.tiles.reduce((sum, tile) => 
+                            sum + (tile.isJoker ? 30 : tile.number), 0);
+                        player.score -= penalty;
+                        winner.score += penalty;
+                    }
+                });
+                
+                updateGameLog(`🏆 ${winner.name} wins with ${winner.score} points! 🏆`);
+                updateStatusBar(`Game over! ${winner.name} wins with ${winner.score} points`);
+                renderGame();
+            }
+            
             // AI Strategy to break the ice (30+ points)
             function tryBreakIce(player) {
                 let bestSet = null;
                 let bestScore = 0;
+                let bestType = '';
                 
                 // Try to find a run of at least 4 tiles for higher points
                 for (let i = 0; i < player.tiles.length - 3; i++) {
@@ -665,6 +809,7 @@
                                 if (finalScore >= 30 && finalScore > bestScore) {
                                     bestSet = setTiles;
                                     bestScore = finalScore;
+                                    bestType = 'run';
                                 }
                             }
                         }
@@ -686,8 +831,9 @@
                     // Add to table
                     state.tableSets.push({
                         tiles: newSet,
-                        type: 'run',
-                        owner: player.name
+                        type: bestType,
+                        owner: player.name,
+                        points: bestScore
                     });
                     
                     // Update score
@@ -727,6 +873,7 @@
                             if (groupScore >= 30 && groupScore > bestScore) {
                                 bestSet = tilesToUse;
                                 bestScore = groupScore;
+                                bestType = 'group';
                             }
                         }
                     }
@@ -747,8 +894,9 @@
                     // Add to table
                     state.tableSets.push({
                         tiles: newSet,
-                        type: 'group',
-                        owner: player.name
+                        type: bestType,
+                        owner: player.name,
+                        points: bestScore
                     });
                     
                     // Update score
@@ -791,14 +939,15 @@
                                     idx !== i && idx !== j && idx !== k);
                                 
                                 // Add to table
+                                const setScore = numbers.reduce((sum, num) => sum + num, 0);
                                 state.tableSets.push({
                                     tiles: newSet,
                                     type: 'run',
-                                    owner: player.name
+                                    owner: player.name,
+                                    points: setScore
                                 });
                                 
                                 // Update score
-                                const setScore = numbers.reduce((sum, num) => sum + num, 0);
                                 player.score += setScore;
                                 
                                 updateGameLog(`${player.name} formed a new run: ${tile1.color} ${numbers.join('-')}`);
@@ -825,6 +974,7 @@
                                 // Add to beginning
                                 set.tiles.unshift({ ...tile });
                                 player.tiles.splice(i, 1);
+                                set.points += tile.number;
                                 player.score += tile.number;
                                 updateGameLog(`${player.name} added a tile to the beginning of a run`);
                                 return true;
@@ -834,6 +984,7 @@
                                 // Add to end
                                 set.tiles.push({ ...tile });
                                 player.tiles.splice(i, 1);
+                                set.points += tile.number;
                                 player.score += tile.number;
                                 updateGameLog(`${player.name} added a tile to the end of a run`);
                                 return true;
@@ -884,14 +1035,15 @@
                             );
                             
                             // Add to table
+                            const groupScore = number * tilesToUse.length;
                             state.tableSets.push({
                                 tiles: newSet,
                                 type: 'group',
-                                owner: player.name
+                                owner: player.name,
+                                points: groupScore
                             });
                             
                             // Update score
-                            const groupScore = number * tilesToUse.length;
                             player.score += groupScore;
                             
                             updateGameLog(`${player.name} formed a new group of ${number}'s`);
@@ -909,22 +1061,17 @@
                 state.gameStarted = true;
                 state.currentPlayer = 0;
                 state.gameLog = [];
+                state.tableSets = [];
                 
                 // Reset icebreaker status
                 state.players.forEach(player => {
                     player.hasBrokenIce = false;
-                });
-                
-                updateGameLog('New game started. Deck shuffled.');
-                updateStatusBar('New game started. Deal tiles to begin.');
-                
-                // Clear player tiles
-                state.players.forEach(player => {
                     player.tiles = [];
                     player.score = 0;
                 });
                 
-                state.tableSets = [];
+                updateGameLog('New game started. Deck shuffled.');
+                updateStatusBar('New game started. Deal tiles to begin.');
                 renderGame();
             }
             
@@ -980,7 +1127,12 @@
             
             // Update status bar
             function updateStatusBar(message) {
-                statusBar.textContent = message;
+                const currentPlayer = state.players[state.currentPlayer];
+                const iceStatus = currentPlayer.hasBrokenIce ? 
+                    '<span class="icebreaker-indicator">❄️ Ice Broken</span>' : 
+                    '<span class="icebreaker-indicator">⚠️ Ice Not Broken</span>';
+                
+                statusBar.innerHTML = `${message} ${iceStatus}`;
             }
             
             // Render the game state
@@ -989,7 +1141,7 @@
                 playerArea.innerHTML = state.players.map((player, index) => {
                     const isCurrent = state.currentPlayer === index;
                     return `
-                        <div class="player ${player.hasBrokenIce ? 'ice-broken' : ''}">
+                        <div class="player ${player.hasBrokenIce ? 'ice-broken' : ''} ${isCurrent ? 'current-turn' : ''}">
                             <div class="player-header">
                                 <div class="player-name">
                                     ${player.name} ${isCurrent ? '➤' : ''}
@@ -1006,16 +1158,21 @@
                 }).join('');
                 
                 // Render table sets
-                tableSets.innerHTML = state.tableSets.length > 0 
-                    ? state.tableSets.map((set, index) => `
+                if (state.tableSets.length > 0) {
+                    tableSets.innerHTML = state.tableSets.map((set, index) => `
                         <div class="set">
-                            <div class="set-title">${set.type} (by ${set.owner})</div>
+                            <div class="set-header">
+                                <div class="set-title">${set.type} (by ${set.owner})</div>
+                                <div class="set-points">${set.points} pts</div>
+                            </div>
                             <div class="set-tiles">
                                 ${set.tiles.map(tile => renderTile(tile)).join('')}
                             </div>
                         </div>
-                    `).join('')
-                    : '<div class="no-sets">No sets on the table yet</div>';
+                    `).join('');
+                } else {
+                    tableSets.innerHTML = '<div class="no-sets">No sets on the table yet. Players must break the ice first!</div>';
+                }
             }
             
             // Render a tile
@@ -1031,9 +1188,20 @@
                 return `
                     <div class="tile ${tile.color}">
                         <div class="tile-value">${tile.number}</div>
-                        <div class="tile-color">${tile.color.charAt(0).toUpperCase()}</div>
+                        <div class="tile-color">${getColorSymbol(tile.color)}</div>
                     </div>
                 `;
+            }
+            
+            // Get color symbol
+            function getColorSymbol(color) {
+                switch(color) {
+                    case 'red': return '🔴';
+                    case 'blue': return '🔵';
+                    case 'yellow': return '🟡';
+                    case 'black': return '⚫';
+                    default: return '';
+                }
             }
             
             // Event listeners
