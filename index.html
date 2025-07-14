@@ -187,7 +187,16 @@
         .tile.blue { background: linear-gradient(to bottom, #4d79ff, #0040cc); }
         .tile.yellow { background: linear-gradient(to bottom, #ffff4d, #cccc00); color: #333; }
         .tile.black { background: linear-gradient(to bottom, #666666, #000000); }
-        .tile.joker { background: linear-gradient(to bottom, #9b59b6, #8e44ad); }
+        .tile.joker { 
+            background: linear-gradient(to bottom, #9b59b6, #8e44ad);
+            animation: jokerGlow 2s infinite;
+        }
+        
+        @keyframes jokerGlow {
+            0% { box-shadow: 0 0 5px rgba(155, 89, 182, 0.7); }
+            50% { box-shadow: 0 0 15px rgba(155, 89, 182, 0.9); }
+            100% { box-shadow: 0 0 5px rgba(155, 89, 182, 0.7); }
+        }
         
         .tile-value {
             font-size: 1.5rem;
@@ -251,6 +260,24 @@
             justify-content: center;
         }
         
+        .joker-replacement {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #ffcc00;
+            color: #333;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+        
         .log-container {
             height: 200px;
             overflow-y: auto;
@@ -288,6 +315,16 @@
         
         .icebreaker-indicator {
             background: rgba(102, 255, 102, 0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 10px;
+        }
+        
+        .joker-indicator {
+            background: rgba(155, 89, 182, 0.3);
             padding: 8px 15px;
             border-radius: 20px;
             display: inline-flex;
@@ -363,11 +400,11 @@
             line-height: 1.5;
         }
         
-        .icebreaker-highlight {
-            background: rgba(102, 255, 102, 0.15);
+        .joker-highlight {
+            background: rgba(155, 89, 182, 0.15);
             padding: 10px 15px;
             border-radius: 8px;
-            border-left: 4px solid #66ff66;
+            border-left: 4px solid #9b59b6;
             margin: 15px 0;
             font-weight: bold;
         }
@@ -419,7 +456,7 @@
     <div class="container">
         <header>
             <h1>Rummikub Game Simulator</h1>
-            <p class="subtitle">Official rules implementation with icebreaker requirement and turn mechanics</p>
+            <p class="subtitle">Official rules implementation with Joker card functionality</p>
         </header>
         
         <div class="game-controls">
@@ -460,68 +497,64 @@
         </div>
         
         <div class="section">
-            <h2 class="section-title">AI Strategy Implementation</h2>
+            <h2 class="section-title">Joker Card Strategy</h2>
             <div class="strategy-info">
                 <div class="strategy-card">
-                    <h3>❄️ Icebreaker Strategy</h3>
-                    <p>Players must form sets totaling at least 30 points from their own tiles before playing on existing sets.</p>
+                    <h3>🃏 Joker Usage</h3>
+                    <p>Jokers can substitute for any tile in a set. Players can replace table jokers with the actual tile if they have it.</p>
                 </div>
                 <div class="strategy-card">
-                    <h3>🔢 Set Formation</h3>
-                    <p>AI prioritizes creating runs (consecutive numbers same color) and groups (same number different colors).</p>
+                    <h3>🧊 Icebreaker Priority</h3>
+                    <p>AI uses jokers strategically to complete high-value sets for the icebreaker requirement.</p>
                 </div>
                 <div class="strategy-card">
-                    <h3>🃏 Tile Management</h3>
-                    <p>AI keeps high-value tiles when possible and plays duplicates early to avoid penalty points.</p>
+                    <h3>🔄 Joker Recovery</h3>
+                    <p>Players can reclaim jokers from the table by replacing them with the actual tile they represent.</p>
                 </div>
                 <div class="strategy-card">
-                    <h3>🎯 Joker Usage</h3>
-                    <p>Jokers are used strategically to complete high-value sets when no other options are available.</p>
+                    <h3>🎯 Strategic Placement</h3>
+                    <p>Jokers are used in positions that allow for future expansion of sets.</p>
                 </div>
             </div>
         </div>
         
         <div class="rules-container">
-            <h2 class="rules-title">Official Rummikub Icebreaker Rules</h2>
+            <h2 class="rules-title">Official Rummikub Joker Rules</h2>
             
             <div class="rules-section">
-                <h3>Initial Meld (Icebreaker) Requirement</h3>
+                <h3>Joker Card Functionality</h3>
                 <ul class="rules-list">
-                    <li>Each player must make an initial play called the "icebreaker" before they can play on existing sets</li>
-                    <li>The icebreaker must consist of one or more sets (runs or groups) that total at least <strong>30 points</strong></li>
-                    <li>These sets must be formed <strong>only from the player's own tiles</strong></li>
-                    <li class="icebreaker-highlight">Players cannot add to existing sets until they have broken the ice</li>
-                    <li>If a player cannot break the ice, they must draw a tile and end their turn</li>
+                    <li>Jokers can substitute for any tile in a set (run or group)</li>
+                    <li class="joker-highlight">When a joker is on the table, a player can retrieve it by replacing it with the tile it represents from their hand</li>
+                    <li>The player must use the joker immediately in the same turn to form a new valid set</li>
+                    <li>Jokers count as 30 points if left in hand at game end</li>
                 </ul>
             </div>
             
             <div class="rules-section">
-                <h3>Valid Sets</h3>
+                <h3>Icebreaker with Joker</h3>
                 <ul class="rules-list">
-                    <li><strong>Run:</strong> 3+ consecutive numbers of the same color (e.g., 7🔴, 8🔴, 9🔴)</li>
-                    <li><strong>Group:</strong> 3+ tiles of the same number in different colors (e.g., 5🔴, 5🔵, 5🟡)</li>
-                    <li>Each set must contain at least 3 tiles</li>
-                    <li>Jokers can substitute for any tile in a set</li>
+                    <li>Jokers can be used in the initial 30+ point icebreaker set</li>
+                    <li>The joker's value in a set is the value of the tile it represents</li>
+                    <li>Players can use jokers to complete high-value sets when natural tiles are missing</li>
                 </ul>
             </div>
             
             <div class="rules-section">
-                <h3>After Breaking the Ice</h3>
+                <h3>Joker Replacement Rules</h3>
                 <ul class="rules-list">
-                    <li>Players can play tiles on existing sets in addition to creating new sets</li>
-                    <li>All tiles on the table must be rearranged into valid sets at the end of each player's turn</li>
-                    <li>Players can manipulate all tiles on the table to form new combinations</li>
-                    <li>If a player cannot play any tiles, they must draw one tile from the pool</li>
+                    <li>To replace a joker in a run, the player must have the exact tile that fits in the sequence</li>
+                    <li>To replace a joker in a group, the player must have the same number tile in a color not already in the group</li>
+                    <li>After replacing the joker, the player must immediately use it to form a new valid set</li>
                 </ul>
             </div>
             
             <div class="rules-section">
-                <h3>Scoring</h3>
+                <h3>End Game Scoring</h3>
                 <ul class="rules-list">
-                    <li>When a player empties their rack, all other players add up the values of their remaining tiles</li>
-                    <li>The winner scores the sum of all other players' tiles as positive points</li>
-                    <li>Other players score the value of their remaining tiles as negative points</li>
-                    <li>Jokers count as 30 penalty points</li>
+                    <li>Jokers left in hand count as 30 penalty points</li>
+                    <li>If a player goes out, other players sum their remaining tiles including jokers</li>
+                    <li>The winner scores positive points equal to the sum of all opponents' tiles</li>
                 </ul>
             </div>
         </div>
@@ -703,17 +736,22 @@
                     } else {
                         // Player has already broken the ice
                         
-                        // Strategy 2: Try to form a new set if possible
+                        // Strategy 2: Try to replace a joker on the table
+                        if (!moveMade) {
+                            moveMade = tryReplaceJoker(player);
+                        }
+                        
+                        // Strategy 3: Try to form a new set if possible
                         if (!moveMade) {
                             moveMade = tryFormNewSet(player);
                         }
                         
-                        // Strategy 3: Try to add to existing sets (only if ice broken)
+                        // Strategy 4: Try to add to existing sets
                         if (!moveMade) {
                             moveMade = tryAddToExistingSets(player);
                         }
                         
-                        // Strategy 4: Try to form a group with high numbers
+                        // Strategy 5: Try to form a group with high numbers
                         if (!moveMade) {
                             moveMade = tryFormHighGroup(player);
                         }
@@ -744,24 +782,326 @@
                 }, 800);
             }
             
-            // End the game and calculate scores
-            function endGame() {
-                const winner = state.players.find(p => p.tiles.length === 0);
-                if (!winner) return;
+            // Replace a joker on the table with the actual tile
+            function tryReplaceJoker(player) {
+                // Only try if player has broken the ice
+                if (!player.hasBrokenIce) return false;
                 
-                // Calculate scores
-                state.players.forEach(player => {
-                    if (player !== winner) {
-                        const penalty = player.tiles.reduce((sum, tile) => 
-                            sum + (tile.isJoker ? 30 : tile.number), 0);
-                        player.score -= penalty;
-                        winner.score += penalty;
+                // Look for sets with jokers on the table
+                for (let setIndex = 0; setIndex < state.tableSets.length; setIndex++) {
+                    const set = state.tableSets[setIndex];
+                    
+                    // Find joker position in the set
+                    const jokerIndex = set.tiles.findIndex(tile => tile.isJoker);
+                    if (jokerIndex === -1) continue;
+                    
+                    const joker = set.tiles[jokerIndex];
+                    
+                    if (set.type === 'run') {
+                        // For runs: determine what tile the joker represents
+                        let requiredTile = null;
+                        
+                        if (jokerIndex === 0) {
+                            // Joker is at the beginning
+                            const nextTile = set.tiles[1];
+                            requiredTile = {
+                                number: nextTile.number - 1,
+                                color: nextTile.color,
+                                isJoker: false
+                            };
+                        } else if (jokerIndex === set.tiles.length - 1) {
+                            // Joker is at the end
+                            const prevTile = set.tiles[jokerIndex - 1];
+                            requiredTile = {
+                                number: prevTile.number + 1,
+                                color: prevTile.color,
+                                isJoker: false
+                            };
+                        } else {
+                            // Joker is in the middle
+                            const prevTile = set.tiles[jokerIndex - 1];
+                            const nextTile = set.tiles[jokerIndex + 1];
+                            if (nextTile.number - prevTile.number === 2) {
+                                requiredTile = {
+                                    number: prevTile.number + 1,
+                                    color: prevTile.color,
+                                    isJoker: false
+                                };
+                            }
+                        }
+                        
+                        if (requiredTile) {
+                            // Check if player has the required tile
+                            const playerTileIndex = player.tiles.findIndex(tile => 
+                                !tile.isJoker && 
+                                tile.number === requiredTile.number && 
+                                tile.color === requiredTile.color
+                            );
+                            
+                            if (playerTileIndex !== -1) {
+                                const playerTile = player.tiles[playerTileIndex];
+                                
+                                // Replace joker with actual tile
+                                set.tiles[jokerIndex] = { ...playerTile };
+                                player.tiles.splice(playerTileIndex, 1);
+                                
+                                // Add joker to player's tiles temporarily
+                                player.tiles.push(joker);
+                                sortPlayerTiles(player);
+                                
+                                // Try to use the joker immediately
+                                let jokerUsed = tryFormNewSetWithJoker(player, joker) || 
+                                                tryAddToExistingSetsWithJoker(player, joker);
+                                
+                                if (jokerUsed) {
+                                    updateGameLog(`🃏 ${player.name} replaced a joker with ${playerTile.number}${getColorSymbol(playerTile.color)} and used the joker!`);
+                                    return true;
+                                } else {
+                                    // Couldn't use joker - revert changes
+                                    set.tiles[jokerIndex] = joker;
+                                    player.tiles = player.tiles.filter(t => t !== joker);
+                                    player.tiles.push(playerTile);
+                                    sortPlayerTiles(player);
+                                }
+                            }
+                        }
+                    } else if (set.type === 'group') {
+                        // For groups: joker can be replaced with any missing color
+                        const groupNumber = set.tiles.find(t => !t.isJoker).number;
+                        const existingColors = new Set(set.tiles.filter(t => !t.isJoker).map(t => t.color));
+                        const allColors = ['red', 'blue', 'yellow', 'black'];
+                        const missingColors = allColors.filter(color => !existingColors.has(color));
+                        
+                        for (let color of missingColors) {
+                            // Check if player has tile with same number and missing color
+                            const playerTileIndex = player.tiles.findIndex(tile => 
+                                !tile.isJoker && 
+                                tile.number === groupNumber && 
+                                tile.color === color
+                            );
+                            
+                            if (playerTileIndex !== -1) {
+                                const playerTile = player.tiles[playerTileIndex];
+                                
+                                // Replace joker with actual tile
+                                set.tiles[jokerIndex] = { ...playerTile };
+                                player.tiles.splice(playerTileIndex, 1);
+                                
+                                // Add joker to player's tiles temporarily
+                                player.tiles.push(joker);
+                                sortPlayerTiles(player);
+                                
+                                // Try to use the joker immediately
+                                let jokerUsed = tryFormNewSetWithJoker(player, joker) || 
+                                                tryAddToExistingSetsWithJoker(player, joker);
+                                
+                                if (jokerUsed) {
+                                    updateGameLog(`🃏 ${player.name} replaced a joker with ${playerTile.number}${getColorSymbol(playerTile.color)} and used the joker!`);
+                                    return true;
+                                } else {
+                                    // Couldn't use joker - revert changes
+                                    set.tiles[jokerIndex] = joker;
+                                    player.tiles = player.tiles.filter(t => t !== joker);
+                                    player.tiles.push(playerTile);
+                                    sortPlayerTiles(player);
+                                }
+                            }
+                        }
                     }
-                });
+                }
                 
-                updateGameLog(`🏆 ${winner.name} wins with ${winner.score} points! 🏆`);
-                updateStatusBar(`Game over! ${winner.name} wins with ${winner.score} points`);
-                renderGame();
+                return false;
+            }
+            
+            // Try to form a new set with a joker (after replacing one)
+            function tryFormNewSetWithJoker(player, joker) {
+                // Try to form a run with the joker
+                for (let i = 0; i < player.tiles.length; i++) {
+                    const tile1 = player.tiles[i];
+                    if (tile1.isJoker) continue;
+                    
+                    for (let j = i + 1; j < player.tiles.length; j++) {
+                        const tile2 = player.tiles[j];
+                        if (tile2.isJoker || tile1.color !== tile2.color) continue;
+                        
+                        // Check possible positions for joker
+                        const numbers = [tile1.number, tile2.number].sort((a, b) => a - b);
+                        
+                        // Case 1: Joker at the beginning [joker, num1, num2]
+                        if (numbers[0] - 1 === numbers[1] - 2) {
+                            const newSet = [
+                                { ...joker },
+                                { ...tile1 },
+                                { ...tile2 }
+                            ];
+                            
+                            // Remove tiles from player
+                            player.tiles = player.tiles.filter((t, idx) => 
+                                idx !== i && idx !== j && t !== joker);
+                            
+                            // Add to table
+                            const setScore = (numbers[0]-1) + numbers[0] + numbers[1];
+                            state.tableSets.push({
+                                tiles: newSet,
+                                type: 'run',
+                                owner: player.name,
+                                points: setScore
+                            });
+                            
+                            // Update score
+                            player.score += setScore;
+                            
+                            updateGameLog(`${player.name} formed a new run with joker: ${tile1.color} ${numbers[0]-1}-${numbers[0]}-${numbers[1]}`);
+                            return true;
+                        }
+                        
+                        // Case 2: Joker in the middle [num1, joker, num2]
+                        if (numbers[0] + 1 === numbers[1] - 1) {
+                            const newSet = [
+                                { ...tile1 },
+                                { ...joker },
+                                { ...tile2 }
+                            ];
+                            
+                            // Remove tiles from player
+                            player.tiles = player.tiles.filter((t, idx) => 
+                                idx !== i && idx !== j && t !== joker);
+                            
+                            // Add to table
+                            const setScore = numbers[0] + (numbers[0]+1) + numbers[1];
+                            state.tableSets.push({
+                                tiles: newSet,
+                                type: 'run',
+                                owner: player.name,
+                                points: setScore
+                            });
+                            
+                            // Update score
+                            player.score += setScore;
+                            
+                            updateGameLog(`${player.name} formed a new run with joker: ${tile1.color} ${numbers[0]}-${numbers[0]+1}-${numbers[1]}`);
+                            return true;
+                        }
+                        
+                        // Case 3: Joker at the end [num1, num2, joker]
+                        if (numbers[0] + 1 === numbers[1] && numbers[1] + 1 === numbers[1] + 2) {
+                            const newSet = [
+                                { ...tile1 },
+                                { ...tile2 },
+                                { ...joker }
+                            ];
+                            
+                            // Remove tiles from player
+                            player.tiles = player.tiles.filter((t, idx) => 
+                                idx !== i && idx !== j && t !== joker);
+                            
+                            // Add to table
+                            const setScore = numbers[0] + numbers[1] + (numbers[1]+1);
+                            state.tableSets.push({
+                                tiles: newSet,
+                                type: 'run',
+                                owner: player.name,
+                                points: setScore
+                            });
+                            
+                            // Update score
+                            player.score += setScore;
+                            
+                            updateGameLog(`${player.name} formed a new run with joker: ${tile1.color} ${numbers[0]}-${numbers[1]}-${numbers[1]+1}`);
+                            return true;
+                        }
+                    }
+                }
+                
+                // Try to form a group with the joker
+                const groups = {};
+                for (let tile of player.tiles) {
+                    if (tile.isJoker) continue;
+                    if (!groups[tile.number]) {
+                        groups[tile.number] = new Set();
+                    }
+                    groups[tile.number].add(tile.color);
+                }
+                
+                for (let number in groups) {
+                    const colors = groups[number];
+                    if (colors.size >= 2) {
+                        const tilesToUse = [];
+                        let color1, color2;
+                        for (let color of colors) {
+                            if (!color1) {
+                                color1 = color;
+                                tilesToUse.push(player.tiles.find(t => t.number == number && t.color === color));
+                            } else if (!color2) {
+                                color2 = color;
+                                tilesToUse.push(player.tiles.find(t => t.number == number && t.color === color));
+                                break;
+                            }
+                        }
+                        
+                        if (tilesToUse.length === 2) {
+                            const newSet = [
+                                { ...tilesToUse[0] },
+                                { ...tilesToUse[1] },
+                                { ...joker }
+                            ];
+                            
+                            // Remove tiles from player
+                            player.tiles = player.tiles.filter(t => 
+                                t !== tilesToUse[0] && t !== tilesToUse[1] && t !== joker);
+                            
+                            // Add to table
+                            const groupScore = number * 3;
+                            state.tableSets.push({
+                                tiles: newSet,
+                                type: 'group',
+                                owner: player.name,
+                                points: groupScore
+                            });
+                            
+                            // Update score
+                            player.score += groupScore;
+                            
+                            updateGameLog(`${player.name} formed a new group with joker: ${number}'s`);
+                            return true;
+                        }
+                    }
+                }
+                
+                return false;
+            }
+            
+            // Try to add to existing sets with a joker
+            function tryAddToExistingSetsWithJoker(player, joker) {
+                // Simple strategy: try to add joker to an existing set
+                for (let set of state.tableSets) {
+                    if (set.type === 'run') {
+                        // Try to add to the beginning or end of a run
+                        const firstTile = set.tiles[0];
+                        const lastTile = set.tiles[set.tiles.length - 1];
+                        
+                        // Try beginning
+                        if (joker && firstTile.number > 1) {
+                            set.tiles.unshift({ ...joker });
+                            player.tiles = player.tiles.filter(t => t !== joker);
+                            set.points += firstTile.number - 1;
+                            player.score += firstTile.number - 1;
+                            updateGameLog(`${player.name} added a joker to the beginning of a run`);
+                            return true;
+                        }
+                        
+                        // Try end
+                        if (joker && lastTile.number < 13) {
+                            set.tiles.push({ ...joker });
+                            player.tiles = player.tiles.filter(t => t !== joker);
+                            set.points += lastTile.number + 1;
+                            player.score += lastTile.number + 1;
+                            updateGameLog(`${player.name} added a joker to the end of a run`);
+                            return true;
+                        }
+                    }
+                }
+                return false;
             }
             
             // AI Strategy to break the ice (30+ points)
@@ -795,15 +1135,15 @@
                                 
                                 for (let l = k + 1; l < player.tiles.length; l++) {
                                     const nextTile = player.tiles[l];
-                                    if (!nextTile.isJoker && nextTile.color === tile1.color && 
-                                        nextTile.number === numbers[2] + 1) {
+                                    if (nextTile.isJoker || (nextTile.color === tile1.color && 
+                                        nextTile.number === numbers[2] + 1)) {
                                         tile4 = nextTile;
                                         setTiles = [tile1, tile2, tile3, tile4];
                                         break;
                                     }
                                 }
                                 
-                                const finalScore = setTiles.reduce((sum, tile) => sum + tile.number, 0);
+                                const finalScore = setTiles.reduce((sum, tile) => sum + (tile.isJoker ? numbers[2] + 1 : tile.number), 0);
                                 
                                 // Check if it meets the icebreaker requirement
                                 if (finalScore >= 30 && finalScore > bestScore) {
@@ -825,7 +1165,9 @@
                     player.tiles = player.tiles.filter(tile => 
                         !bestSet.some(t => 
                             t.number === tile.number && 
-                            t.color === tile.color)
+                            t.color === tile.color &&
+                            !tile.isJoker) && 
+                        !bestSet.some(t => tile.isJoker && t.isJoker)
                     );
                     
                     // Add to table
@@ -855,7 +1197,7 @@
                 
                 // Look for a group of 3 or 4 with high numbers
                 for (let number = 13; number >= 8; number--) {
-                    if (groups[number] && groups[number].length >= 3) {
+                    if (groups[number] && groups[number].length >= 2) {
                         // Check if we have different colors
                         const colors = new Set();
                         const tilesToUse = [];
@@ -864,46 +1206,43 @@
                             if (!colors.has(tile.color)) {
                                 colors.add(tile.color);
                                 tilesToUse.push(tile);
-                                if (colors.size === 4) break; // Max 4 colors
+                                if (colors.size === 2) break; // Need at least 3 with joker
                             }
                         }
                         
-                        if (colors.size >= 3) {
-                            const groupScore = number * tilesToUse.length;
+                        // Check if we have a joker to complete the group
+                        const joker = player.tiles.find(t => t.isJoker);
+                        if (colors.size >= 2 && joker) {
+                            const groupScore = number * 3;
                             if (groupScore >= 30 && groupScore > bestScore) {
-                                bestSet = tilesToUse;
-                                bestScore = groupScore;
-                                bestType = 'group';
+                                // Form the group
+                                const newSet = tilesToUse.map(tile => ({ ...tile }));
+                                newSet.push({ ...joker });
+                                
+                                // Remove tiles from player
+                                player.tiles = player.tiles.filter(tile => 
+                                    !tilesToUse.some(t => 
+                                        t.number === tile.number && 
+                                        t.color === tile.color) &&
+                                    tile !== joker
+                                );
+                                
+                                // Add to table
+                                state.tableSets.push({
+                                    tiles: newSet,
+                                    type: 'group',
+                                    owner: player.name,
+                                    points: groupScore
+                                });
+                                
+                                // Update score
+                                player.score += groupScore;
+                                
+                                updateGameLog(`${player.name} formed an icebreaker group with joker: ${groupScore} points`);
+                                return true;
                             }
                         }
                     }
-                }
-                
-                // If we found a qualifying group, play it
-                if (bestSet) {
-                    // Create a copy of the tiles
-                    const newSet = bestSet.map(tile => ({ ...tile }));
-                    
-                    // Remove tiles from player
-                    player.tiles = player.tiles.filter(tile => 
-                        !bestSet.some(t => 
-                            t.number === tile.number && 
-                            t.color === tile.color)
-                    );
-                    
-                    // Add to table
-                    state.tableSets.push({
-                        tiles: newSet,
-                        type: bestType,
-                        owner: player.name,
-                        points: bestScore
-                    });
-                    
-                    // Update score
-                    player.score += bestScore;
-                    
-                    updateGameLog(`${player.name} formed an icebreaker group: ${bestScore} points`);
-                    return true;
                 }
                 
                 return false;
@@ -911,6 +1250,51 @@
             
             // AI Strategy functions
             function tryFormNewSet(player) {
+                // Try to form a run with joker
+                const joker = player.tiles.find(t => t.isJoker);
+                if (joker) {
+                    for (let i = 0; i < player.tiles.length; i++) {
+                        const tile1 = player.tiles[i];
+                        if (tile1.isJoker) continue;
+                        
+                        for (let j = i + 1; j < player.tiles.length; j++) {
+                            const tile2 = player.tiles[j];
+                            if (tile2.isJoker || tile1.color !== tile2.color) continue;
+                            
+                            // Check possible positions for joker
+                            const numbers = [tile1.number, tile2.number].sort((a, b) => a - b);
+                            
+                            // Case 1: Joker in the middle [num1, joker, num2]
+                            if (numbers[0] + 1 === numbers[1] - 1) {
+                                const newSet = [
+                                    { ...tile1 },
+                                    { ...joker },
+                                    { ...tile2 }
+                                ];
+                                
+                                // Remove tiles from player
+                                player.tiles = player.tiles.filter((t, idx) => 
+                                    idx !== i && idx !== j && t !== joker);
+                                
+                                // Add to table
+                                const setScore = numbers[0] + (numbers[0]+1) + numbers[1];
+                                state.tableSets.push({
+                                    tiles: newSet,
+                                    type: 'run',
+                                    owner: player.name,
+                                    points: setScore
+                                });
+                                
+                                // Update score
+                                player.score += setScore;
+                                
+                                updateGameLog(`${player.name} formed a new run with joker: ${tile1.color} ${numbers[0]}-${numbers[0]+1}-${numbers[1]}`);
+                                return true;
+                            }
+                        }
+                    }
+                }
+                
                 // Simple strategy: try to find 3 consecutive numbers of same color
                 for (let i = 0; i < player.tiles.length - 2; i++) {
                     const tile1 = player.tiles[i];
@@ -1054,6 +1438,26 @@
                 return false;
             }
             
+            // End the game and calculate scores
+            function endGame() {
+                const winner = state.players.find(p => p.tiles.length === 0);
+                if (!winner) return;
+                
+                // Calculate scores
+                state.players.forEach(player => {
+                    if (player !== winner) {
+                        const penalty = player.tiles.reduce((sum, tile) => 
+                            sum + (tile.isJoker ? 30 : tile.number), 0);
+                        player.score -= penalty;
+                        winner.score += penalty;
+                    }
+                });
+                
+                updateGameLog(`🏆 ${winner.name} wins with ${winner.score} points! 🏆`);
+                updateStatusBar(`Game over! ${winner.name} wins with ${winner.score} points`);
+                renderGame();
+            }
+            
             // Start a new game
             function startNewGame() {
                 createDeck();
@@ -1132,7 +1536,21 @@
                     '<span class="icebreaker-indicator">❄️ Ice Broken</span>' : 
                     '<span class="icebreaker-indicator">⚠️ Ice Not Broken</span>';
                 
-                statusBar.innerHTML = `${message} ${iceStatus}`;
+                const jokerStatus = currentPlayer.tiles.some(t => t.isJoker) ?
+                    '<span class="joker-indicator">🃏 Has Joker</span>' : '';
+                
+                statusBar.innerHTML = `${message} ${iceStatus} ${jokerStatus}`;
+            }
+            
+            // Get color symbol
+            function getColorSymbol(color) {
+                switch(color) {
+                    case 'red': return '🔴';
+                    case 'blue': return '🔵';
+                    case 'yellow': return '🟡';
+                    case 'black': return '⚫';
+                    default: return '';
+                }
             }
             
             // Render the game state
@@ -1159,17 +1577,26 @@
                 
                 // Render table sets
                 if (state.tableSets.length > 0) {
-                    tableSets.innerHTML = state.tableSets.map((set, index) => `
-                        <div class="set">
-                            <div class="set-header">
-                                <div class="set-title">${set.type} (by ${set.owner})</div>
-                                <div class="set-points">${set.points} pts</div>
+                    tableSets.innerHTML = state.tableSets.map((set, index) => {
+                        const jokerIndex = set.tiles.findIndex(t => t.isJoker);
+                        return `
+                            <div class="set">
+                                <div class="set-header">
+                                    <div class="set-title">${set.type} (by ${set.owner})</div>
+                                    <div class="set-points">${set.points} pts</div>
+                                </div>
+                                <div class="set-tiles">
+                                    ${set.tiles.map((tile, idx) => {
+                                        const tileHtml = renderTile(tile);
+                                        if (jokerIndex === idx) {
+                                            return `<div style="position:relative;">${tileHtml}<div class="joker-replacement" title="Joker can be replaced">R</div></div>`;
+                                        }
+                                        return tileHtml;
+                                    }).join('')}
+                                </div>
                             </div>
-                            <div class="set-tiles">
-                                ${set.tiles.map(tile => renderTile(tile)).join('')}
-                            </div>
-                        </div>
-                    `).join('');
+                        `;
+                    }).join('');
                 } else {
                     tableSets.innerHTML = '<div class="no-sets">No sets on the table yet. Players must break the ice first!</div>';
                 }
@@ -1191,17 +1618,6 @@
                         <div class="tile-color">${getColorSymbol(tile.color)}</div>
                     </div>
                 `;
-            }
-            
-            // Get color symbol
-            function getColorSymbol(color) {
-                switch(color) {
-                    case 'red': return '🔴';
-                    case 'blue': return '🔵';
-                    case 'yellow': return '🟡';
-                    case 'black': return '⚫';
-                    default: return '';
-                }
             }
             
             // Event listeners
