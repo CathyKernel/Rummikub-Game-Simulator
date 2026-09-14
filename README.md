@@ -1,2 +1,2 @@
 # Rummikub-Game-Simulator
-![](images/cat.png)
+![](./Rummikub Game Simulator.png)
