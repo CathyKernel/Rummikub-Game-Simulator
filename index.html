@@ -1,592 +1,1994 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rummikub Game Simulator - Optimized</title>
-    <style>
-        :root {
-            --bg-gradient: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
-            --card-bg: rgba(0, 0, 0, 0.4);
-            --tile-red: linear-gradient(to bottom, #ff4d4d, #cc0000);
-            --tile-blue: linear-gradient(to bottom, #4d79ff, #0040cc);
-            --tile-yellow: linear-gradient(to bottom, #ffff4d, #cccc00);
-            --tile-black: linear-gradient(to bottom, #666666, #000000);
-            --tile-joker: linear-gradient(to bottom, #9b59b6, #8e44ad);
-            --accent: #ff9a00;
-        }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rummikub Simulator — Official Rules Engine</title>
+<meta name="description" content="A single-file Rummikub simulator implementing the official rules: 30-point initial meld, full table manipulation, joker retrieval, official scoring, exact-cover AI solver and batch analysis.">
+<style>
+:root{
+  --bg:#0d1321; --bg2:#0a0f1b; --panel:#141d33; --panel2:#101728; --panel3:#1a2542;
+  --line:#26324f; --line2:#33436b; --text:#e7eef8; --muted:#94a6c6; --faint:#6b7ea6;
+  --accent:#f6a821; --accent2:#ffc55c; --good:#35c98e; --bad:#f05252; --info:#4fa3e3;
+  --red:#d92c25; --blue:#1f74d0; --orange:#ef8f1f; --black:#20262f;
+}
+*{box-sizing:border-box; margin:0; padding:0}
+html,body{height:100%}
+body{
+  font-family:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  background:
+    radial-gradient(1100px 500px at 85% -10%, rgba(246,168,33,.07), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(31,116,208,.10), transparent 55%),
+    var(--bg);
+  color:var(--text); min-height:100vh; padding:18px 20px 30px;
+}
+.wrap{max-width:1280px; margin:0 auto}
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        
-        body {
-            background: var(--bg-gradient);
-            color: white;
-            min-height: 100vh;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+/* ---------- header ---------- */
+header{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:4px}
+.brand{display:flex; align-items:center; gap:10px}
+.logo{
+  width:34px;height:34px;border-radius:8px; display:inline-flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg,var(--red),var(--orange) 40%,var(--blue));
+  color:#fff; font-weight:900; font-size:15px; letter-spacing:-1px; box-shadow:0 4px 14px rgba(246,168,33,.25);
+}
+h1{font-size:22px; letter-spacing:.5px; font-weight:800}
+h1 em{font-style:normal; color:var(--accent); font-weight:300; letter-spacing:2.5px; text-transform:uppercase; font-size:19px}
+.tagline{color:var(--muted); font-size:12.5px; margin:2px 0 16px}
+.tagline b{color:var(--accent2); font-weight:600}
 
-        .container { width: 100%; max-width: 1400px; }
+/* ---------- controls ---------- */
+.controls{
+  display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center;
+  background:linear-gradient(180deg,var(--panel3),var(--panel));
+  border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.25);
+}
+.btns{display:flex; gap:8px; flex-wrap:wrap}
+button{
+  font:inherit; font-size:13.5px; font-weight:600; color:var(--text);
+  background:#1d2a4a; border:1px solid var(--line2); border-radius:8px;
+  padding:9px 16px; cursor:pointer; transition:all .15s ease; white-space:nowrap;
+}
+button:hover:not(:disabled){background:#273757; transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0)}
+button:disabled{opacity:.38; cursor:not-allowed}
+button.primary{background:linear-gradient(180deg,var(--accent),#e09413); border-color:#c98a10; color:#1b1405}
+button.primary:hover:not(:disabled){background:linear-gradient(180deg,var(--accent2),var(--accent))}
+button.ghost{background:transparent; border-color:var(--line); color:var(--muted)}
+button.ghost:hover:not(:disabled){color:var(--text)}
+button.running{background:linear-gradient(180deg,#b3541e,#8a3d13); border-color:#8a3d13; color:#ffe9d6}
+button.small{padding:4px 10px; font-size:12px; border-radius:6px}
+.settings{display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-left:auto}
+.settings label{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted); white-space:nowrap}
+select,input[type=text]{
+  font:inherit; font-size:13px; color:var(--text); background:var(--panel2);
+  border:1px solid var(--line2); border-radius:7px; padding:7px 9px; outline:none;
+}
+select:focus,input[type=text]:focus{border-color:var(--accent)}
+input[type=text]{width:150px}
+input[type=range]{accent-color:var(--accent); width:130px}
+#speedVal{color:var(--text); font-size:12px; min-width:52px}
 
-        header { text-align: center; margin-bottom: 20px; }
-        h1 { font-size: 2.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin-bottom: 5px; }
-        .subtitle { opacity: 0.8; }
+/* ---------- status bar ---------- */
+.status{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:14px}
+.chip{
+  display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted);
+  background:var(--panel2); border:1px solid var(--line); border-radius:999px; padding:4px 11px;
+}
+.chip b{color:var(--text); font-weight:700}
+.chip.hot{border-color:var(--accent); color:var(--accent2)}
+.chip.good{border-color:rgba(53,201,142,.5); color:var(--good)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent); box-shadow:0 0 8px var(--accent)}
 
-        /* Controls */
-        .controls {
-            display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
-        }
-        button {
-            background: var(--accent); color: white; border: none; padding: 10px 20px;
-            border-radius: 25px; cursor: pointer; font-weight: bold; transition: transform 0.2s, opacity 0.2s;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-        button:hover { transform: translateY(-2px); opacity: 0.9; }
-        button:disabled { background: #555; cursor: not-allowed; transform: none; }
+/* ---------- layout ---------- */
+main{display:grid; grid-template-columns:330px 1fr; gap:14px; align-items:start}
+@media(max-width:1020px){main{grid-template-columns:1fr}}
 
-        /* Status Bar */
-        .status-bar {
-            background: rgba(0,0,0,0.5); padding: 15px; border-radius: 10px; margin-bottom: 20px;
-            text-align: center; font-weight: bold; font-size: 1.1rem;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .status-badge { margin-left: 10px; padding: 2px 8px; border-radius: 10px; font-size: 0.9rem; }
-        .badge-ice { background: #66ff66; color: #000; }
-        .badge-no-ice { background: #ff6666; color: #fff; }
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.panelHead{display:flex; align-items:center; justify-content:space-between; padding:10px 14px 8px}
+.panelHead h2{font-size:12.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:var(--muted)}
+.panelHead .sub{font-size:11.5px; color:var(--faint)}
 
-        /* Game Layout */
-        .game-board {
-            display: grid; grid-template-columns: 1fr; gap: 20px;
-        }
+/* ---------- players ---------- */
+.playersCol{display:flex; flex-direction:column; gap:10px}
+.pcard{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:11px 12px 12px; border-left:4px solid var(--line2); transition:border-color .2s, box-shadow .2s}
+.pcard.turn{border-left-color:var(--accent); box-shadow:0 0 0 1px rgba(246,168,33,.35), 0 8px 22px rgba(246,168,33,.08)}
+.pcard.winner{border-left-color:var(--good); box-shadow:0 0 0 1px rgba(53,201,142,.4)}
+.phead{display:flex; align-items:center; gap:8px; margin-bottom:7px}
+.pname{font-size:14.5px; font-weight:800}
+.ptag{font-size:10px; font-weight:700; letter-spacing:1px; color:#0d1321; background:var(--muted); border-radius:4px; padding:2px 6px; text-transform:uppercase}
+.pturn{font-size:10px; font-weight:800; letter-spacing:1.2px; color:#1b1405; background:var(--accent); border-radius:4px; padding:2px 7px; margin-left:auto; display:none}
+.pcard.turn .pturn{display:inline-block; animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.55}}
+.pchips{display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px}
+.mini{font-size:10.5px; font-weight:600; border-radius:5px; padding:2px 7px; background:var(--panel2); border:1px solid var(--line); color:var(--muted)}
+.mini.ok{color:var(--good); border-color:rgba(53,201,142,.45)}
+.mini.no{color:var(--faint)}
+.mini.score{color:var(--accent2)}
+.rack{display:flex; flex-wrap:wrap; gap:3px; min-height:42px}
 
-        .section {
-            background: var(--card-bg); border-radius: 15px; padding: 15px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2); backdrop-filter: blur(5px);
-        }
-        .section-title { color: #ffcc00; margin-bottom: 10px; border-bottom: 2px solid #ffcc00; padding-bottom: 5px; display: flex; justify-content: space-between; }
+/* ---------- tiles ---------- */
+.tile{
+  display:inline-flex; align-items:center; justify-content:center; position:relative;
+  width:33px; height:45px; border-radius:5px; flex:none;
+  background:linear-gradient(180deg,#fdfdfd,#e7ebf2);
+  box-shadow:0 2px 5px rgba(0,0,0,.45), inset 0 -2px 0 rgba(0,0,0,.12), inset 0 1px 0 #fff;
+  font-weight:900; font-size:18px; font-family:"Segoe UI",Arial,sans-serif;
+}
+.rack .tile{width:27px; height:38px; font-size:14.5px}
+.tile.c0{color:var(--red)} .tile.c1{color:var(--blue)}
+.tile.c2{color:var(--orange)} .tile.c3{color:var(--black)}
+.tile.jk{
+  background:linear-gradient(135deg,#7b2ff7 0%,#c471ed 45%,#12b5d9 100%);
+  color:#fff; font-size:19px; text-shadow:0 1px 3px rgba(0,0,0,.4);
+}
+.rack .tile.jk{font-size:16px}
+.tile.jk i{
+  position:absolute; bottom:1.5px; right:3px; font-style:normal; font-size:8.5px; font-weight:800;
+  color:rgba(255,255,255,.95); letter-spacing:.2px;
+}
+.rack .tile.jk i{font-size:7.5px}
+.tile.fresh{outline:2px solid var(--accent); outline-offset:1px}
 
-        /* Player Hands */
-        .players-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
-        .player-box {
-            background: rgba(30, 30, 60, 0.6); border-radius: 10px; padding: 10px;
-            border: 2px solid transparent; transition: all 0.3s;
-        }
-        .player-box.active { border-color: #ffcc00; box-shadow: 0 0 15px rgba(255, 204, 0, 0.3); }
-        .player-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; }
-        .tiles-container { display: flex; flex-wrap: wrap; gap: 5px; min-height: 70px; }
+/* ---------- table ---------- */
+.tablePanel{margin-bottom:14px}
+.meldsWrap{padding:4px 14px 14px; min-height:150px}
+.melds{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start}
+.set{
+  display:inline-flex; gap:3px; padding:7px; border-radius:9px; position:relative;
+  background:var(--panel2); border:1px solid var(--line); border-top:3px solid var(--line2);
+}
+.set.run{border-top-color:var(--blue)}
+.set.group{border-top-color:var(--orange)}
+.setInfo{position:absolute; top:-9px; right:8px; font-size:9px; font-weight:800; letter-spacing:1px;
+  color:var(--faint); background:var(--bg2); padding:0 6px; border-radius:4px; border:1px solid var(--line)}
+.empty{color:var(--faint); font-size:13px; padding:26px 10px; text-align:center; border:1px dashed var(--line); border-radius:10px; margin:10px 0}
 
-        /* Tiles */
-        .tile {
-            width: 42px; height: 58px; border-radius: 6px; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; font-weight: bold; font-size: 1.2rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.4); position: relative; transition: transform 0.2s;
-            user-select: none;
-        }
-        .tile.red { background: var(--tile-red); }
-        .tile.blue { background: var(--tile-blue); }
-        .tile.yellow { background: var(--tile-yellow); color: #333; }
-        .tile.black { background: var(--tile-black); }
-        .tile.joker { background: var(--tile-joker); animation: pulse 2s infinite; }
-        
-        .tile-number { line-height: 1; }
-        .tile-small { font-size: 0.6rem; margin-top: 2px; }
+/* ---------- bottom row ---------- */
+.bottom{display:grid; grid-template-columns:1fr 330px; gap:14px}
+@media(max-width:1400px){.bottom{grid-template-columns:1fr}}
+@media(max-max-width:1020px){.bottom{grid-template-columns:1fr}}
+.logBody{height:280px; overflow-y:auto; padding:6px 12px 12px; font-size:12.5px; line-height:1.55}
+.logLine{padding:2.5px 0; border-bottom:1px solid rgba(38,50,79,.45); color:var(--muted); animation:fadein .25s ease}
+@keyframes fadein{from{opacity:0; transform:translateY(-3px)} to{opacity:1}}
+.logLine b{color:var(--text); font-weight:700}
+.logLine .turnNo{display:inline-block; min-width:44px; color:var(--faint); font-size:11px; font-variant-numeric:tabular-nums}
+.logLine.lg-turn{color:var(--text)}
+.logLine.lg-meld b, .logLine.lg-event b{color:var(--accent2)}
+.logLine.lg-draw{color:var(--info)}
+.logLine.lg-pass{color:var(--bad)}
+.logLine.lg-end{color:var(--good); font-weight:600; border-bottom:none; background:rgba(53,201,142,.07); border-radius:6px; padding:6px 8px; margin-top:4px}
+.logLine .pn0{color:#ff7b72} .logLine .pn1{color:#6cb2ff} .logLine .pn2{color:#ffb454} .logLine .pn3{color:#cdd7e8}
 
-        /* Table */
-        .table-area {
-            display: flex; flex-wrap: wrap; gap: 15px; min-height: 150px;
-            padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px;
-            align-content: flex-start;
-        }
-        .set-group {
-            background: rgba(255,255,255,0.05); border-radius: 8px; padding: 8px;
-            display: flex; gap: 5px; border: 1px solid rgba(255,255,255,0.1);
-        }
-        .set-info {
-            writing-mode: vertical-rl; text-orientation: mixed; font-size: 0.7rem;
-            color: rgba(255,255,255,0.5); margin-right: 5px;
-        }
+/* ---------- stats / rules ---------- */
+.statsBody{padding:4px 14px 12px}
+.statRow{display:flex; justify-content:space-between; font-size:12.5px; padding:4.5px 0; border-bottom:1px solid rgba(38,50,79,.5)}
+.statRow:last-child{border-bottom:none}
+.statRow span{color:var(--muted)} .statRow b{color:var(--text); font-variant-numeric:tabular-nums}
+.rules{margin:12px 14px 14px; border:1px solid var(--line); border-radius:9px; background:var(--panel2)}
+.rules summary{cursor:pointer; padding:10px 12px; font-size:12px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted); user-select:none}
+.rules summary:hover{color:var(--accent2)}
+.rulesBody{padding:2px 14px 14px; font-size:12.5px; line-height:1.65; color:#c3d0e8; max-height:340px; overflow-y:auto}
+.rulesBody h3{font-size:12.5px; color:var(--accent2); margin:12px 0 3px; letter-spacing:.4px}
+.rulesBody ul{margin:4px 0 4px 18px}
+.rulesBody li{margin:3px 0}
+.rulesBody .sw{display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:4px; vertical-align:-1px}
 
-        /* Log */
-        .log-box { height: 150px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; }
-        .log-entry { margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px; }
-        .log-time { color: #ffcc00; margin-right: 5px; }
+/* ---------- session scoreboard ---------- */
+.sessionBody{padding:4px 14px 12px; display:none}
+table.score{width:100%; border-collapse:collapse; font-size:12px}
+table.score th{color:var(--faint); font-size:10.5px; letter-spacing:1px; text-transform:uppercase; text-align:right; padding:4px 2px; border-bottom:1px solid var(--line)}
+table.score th:first-child, table.score td:first-child{text-align:left}
+table.score td{padding:5px 2px; text-align:right; border-bottom:1px solid rgba(38,50,79,.5); font-variant-numeric:tabular-nums; color:var(--muted)}
+table.score td.wins{color:var(--good); font-weight:700}
+table.score td.pt{color:var(--accent2); font-weight:700}
+table.score tr.me td{color:var(--text)}
 
-        @keyframes pulse { 0%, 100% { box-shadow: 0 0 5px rgba(155, 89, 182, 0.5); } 50% { box-shadow: 0 0 15px rgba(155, 89, 182, 1); } }
-    </style>
+/* ---------- modals ---------- */
+.modalWrap{position:fixed; inset:0; background:rgba(6,10,20,.72); backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center; z-index:50; padding:20px}
+.modalWrap.show{display:flex}
+.modal{width:min(640px, 94vw); max-height:88vh; overflow-y:auto; background:linear-gradient(180deg,var(--panel3),var(--panel)); border:1px solid var(--line2); border-radius:16px; padding:24px 26px; box-shadow:0 30px 80px rgba(0,0,0,.6); animation:pop .25s ease}
+@keyframes pop{from{transform:scale(.94); opacity:0} to{transform:scale(1); opacity:1}}
+.modal h2{font-size:21px; margin-bottom:4px}
+.modal .sub{color:var(--muted); font-size:13px; margin-bottom:16px}
+.banScore{display:flex; align-items:center; gap:12px; background:rgba(53,201,142,.08); border:1px solid rgba(53,201,142,.35); border-radius:11px; padding:12px 16px; margin-bottom:16px}
+.banScore .big{font-size:34px}
+.modal table{width:100%; border-collapse:collapse; margin:8px 0 18px}
+.modal table th{font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--faint); text-align:right; padding:6px 4px; border-bottom:1px solid var(--line2)}
+.modal table th:first-child,.modal table td:first-child{text-align:left}
+.modal table td{padding:7px 4px; text-align:right; font-size:13px; border-bottom:1px solid rgba(38,50,79,.6); font-variant-numeric:tabular-nums}
+.modal table td.win{color:var(--good); font-weight:800}
+.modal .btns{margin-top:6px}
+.progress{height:8px; background:var(--panel2); border-radius:99px; overflow:hidden; margin:12px 0; border:1px solid var(--line)}
+.progress .bar{height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .15s}
+.batchCfg{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:6px}
+
+footer{margin-top:20px; text-align:center; color:var(--faint); font-size:11px; line-height:1.6}
+</style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Rummikub Simulator</h1>
-            <p class="subtitle">Optimized Logic with Unique IDs & AI Improvements</p>
-        </header>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="logo">Ru</span><h1>Rummikub <em>Simulator</em></h1></div>
+  </header>
+  <div class="tagline">Official rules engine &mdash; <b>30-point initial meld</b> &middot; <b>full table manipulation</b> &middot; <b>joker retrieval</b> &middot; official end-game scoring &middot; exact-cover AI solver &middot; seeded replay &middot; batch analysis</div>
 
-        <div class="controls">
-            <button id="btnNew">New Game</button>
-            <button id="btnDeal" disabled>Deal Tiles</button>
-            <button id="btnTurn" disabled>Next Turn</button>
-            <button id="btnAuto" disabled>Auto Play (10 Rounds)</button>
-        </div>
-
-        <div class="status-bar" id="status">Press 'New Game' to initialize.</div>
-
-        <div class="game-board">
-            <!-- Players Section -->
-            <div class="section">
-                <div class="section-title">
-                    <span>Players</span>
-                    <span>Deck: <span id="deckCount">0</span></span>
-                </div>
-                <div class="players-grid" id="playersContainer"></div>
-            </div>
-
-            <!-- Table Section -->
-            <div class="section">
-                <div class="section-title">Table Sets</div>
-                <div class="table-area" id="tableArea">
-                    <div style="opacity: 0.5; width: 100%; text-align: center; padding-top: 30px;">Table is empty.</div>
-                </div>
-            </div>
-
-            <!-- Log Section -->
-            <div class="section">
-                <div class="section-title">Game Log</div>
-                <div class="log-box" id="gameLog"></div>
-            </div>
-        </div>
+  <section class="controls">
+    <div class="btns">
+      <button id="btnNew" class="primary">New Game</button>
+      <button id="btnStep">Next Turn</button>
+      <button id="btnAuto">Auto Play</button>
+      <button id="btnBatch">Batch Simulation</button>
+      <button id="btnReset" class="ghost">Reset Scores</button>
     </div>
+    <div class="settings">
+      <label>Players
+        <select id="players">
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4" selected>4</option>
+        </select>
+      </label>
+      <label>Seed <input type="text" id="seed" placeholder="random" spellcheck="false"></label>
+      <label>Speed <input type="range" id="speed" min="150" max="1500" step="50" value="600"><span id="speedVal">600&thinsp;ms</span></label>
+    </div>
+  </section>
 
-    <script>
-    (function() {
-        // --- Constants ---
-        const COLORS = ['red', 'blue', 'yellow', 'black'];
-        const JOKER_COUNT = 2;
-        const TILES_PER_PLAYER = 14;
-        const ICEBREAKER_SCORE = 30;
-        
-        // --- State ---
-        let state = {
-            deck: [],
-            players: [],
-            table: [], // Array of Sets { id, type, tiles: [] }
-            currentPlayer: 0,
-            phase: 'IDLE', // IDLE, DEALT, RUNNING, ENDED
-            autoPlayTimer: null,
-            logHistory: []
-        };
+  <section class="status" id="status"></section>
 
-        // --- DOM References ---
-        const DOM = {
-            status: document.getElementById('status'),
-            players: document.getElementById('playersContainer'),
-            table: document.getElementById('tableArea'),
-            log: document.getElementById('gameLog'),
-            deck: document.getElementById('deckCount'),
-            btnNew: document.getElementById('btnNew'),
-            btnDeal: document.getElementById('btnDeal'),
-            btnTurn: document.getElementById('btnTurn'),
-            btnAuto: document.getElementById('btnAuto')
-        };
+  <main>
+    <aside class="playersCol" id="playersCol"></aside>
 
-        // --- Utilities ---
-        const uid = () => Math.random().toString(36).substr(2, 9);
-        const sum = arr => arr.reduce((a, b) => a + b, 0);
-        const getColorSymbol = (color) => ({red:'🔴', blue:'🔵', yellow:'🟡', black:'⚫'}[color] || '');
+    <section class="right">
+      <div class="panel tablePanel">
+        <div class="panelHead"><h2>Table</h2><span class="sub" id="tableInfo"></span></div>
+        <div class="meldsWrap"><div class="melds" id="melds"></div></div>
+      </div>
 
-        // --- Core Logic ---
+      <div class="bottom">
+        <div class="panel">
+          <div class="panelHead"><h2>Activity Log</h2><button class="ghost small" id="btnClearLog">Clear</button></div>
+          <div class="logBody" id="log"><div class="logLine" style="color:var(--faint)">Simulation log is empty — start a new game.</div></div>
+        </div>
+        <div class="panel">
+          <div class="panelHead"><h2>Statistics</h2></div>
+          <div class="statsBody" id="stats"></div>
+          <div class="panelHead" style="padding-top:0"><h2>Session Scoreboard</h2></div>
+          <div class="sessionBody" id="sessionBody"></div>
+          <details class="rules">
+            <summary>Official Rules Reference</summary>
+            <div class="rulesBody" id="rulesBody"></div>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
 
-        function createDeck() {
-            let idCounter = 0;
-            const newDeck = [];
-            
-            // Two sets of 1-13 in 4 colors
-            for (let i = 0; i < 2; i++) {
-                for (const color of COLORS) {
-                    for (let num = 1; num <= 13; num++) {
-                        newDeck.push({ id: `t${idCounter++}`, number: num, color, isJoker: false });
-                    }
-                }
+  <footer>
+    Rummikub&reg; is a registered trademark of its respective owner. This is an unofficial, educational single-file simulator.<br>
+    Engine: exact-cover branch &amp; bound solver &middot; baseline incremental play &middot; full rearrangement &middot; joker-retrieval search &middot; deterministic seeded RNG.
+  </footer>
+</div>
+
+<!-- game-over modal -->
+<div class="modalWrap" id="modalWrap"><div class="modal" id="modal"></div></div>
+
+<!-- batch simulation modal -->
+<div class="modalWrap" id="batchWrap">
+  <div class="modal">
+    <h2>Batch Simulation</h2>
+    <div class="sub">Runs headless games with the current player count using a reduced solver budget, then aggregates win rates, scores and rule-event statistics.</div>
+    <div class="batchCfg">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)">Games
+        <select id="batchCount">
+          <option value="10">10</option>
+          <option value="25" selected>25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </label>
+      <button id="btnBatchRun" class="primary small">Run</button>
+      <button id="btnBatchCancel" class="ghost small" style="display:none">Cancel</button>
+      <span id="batchProgressLabel" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <div class="progress"><div class="bar" id="batchBar"></div></div>
+    <div id="batchResults"></div>
+    <div class="btns"><button id="btnBatchClose" class="ghost">Close</button></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+ * Rummikub Official Rules Simulator — core rule engine (pure logic, no DOM,
+ * testable under Node.js)
+ * Rules cross-checked against: rummikub.com official rules / Wikipedia
+ * (current official edition) / Pagat card game rules
+ *  - 106 tiles: 1-13 x 4 colors (red/blue/orange/black) x 2 copies + 2 jokers
+ *  - Run: 3+ consecutive tiles of the same color, 1-13, no wrap-around;
+ *    Group: 3-4 tiles of the same number in different colors
+ *  - Initial meld: rack tiles only, total >= 30 points; a joker scores the
+ *    face value of the tile it stands for
+ *  - The table may not be touched on the initial-meld turn; afterwards the
+ *    table can be rearranged freely (including joker combinations), but any
+ *    table tiles "harvested" during rearrangement must be replayed the same
+ *    turn; table jokers keep their represented number/color (fixed role)
+ *  - Joker retrieval: after breaking the ice, replace a table joker with the
+ *    tile it represents (any missing color is allowed for a 3-tile group);
+ *    the retrieved joker must be played again in the same turn; not allowed
+ *    before breaking the ice
+ *  - At least 1 tile must be played, otherwise draw 1 tile (turn ends);
+ *    if the pool is empty the turn is passed
+ *  - End of round: first empty rack wins; if all players pass in succession
+ *    the lowest rack value wins (jokers count as 30)
+ * ========================================================================== */
+(function (global) {
+'use strict';
+
+var RK = global.RK = global.RK || {};
+
+/* ---------------- Base constants ---------------- */
+RK.COLORS = ['red', 'blue', 'orange', 'black'];          // color indices 0..3
+RK.JKEY = 52;                                            // joker slot inside the count array
+RK.TILE_COUNT = 106;
+RK.HAND_SIZE = 14;
+RK.INITIAL_MELD_MIN = 30;                                // official minimum initial-meld score
+RK.JOKER_PENALTY = 30;                                   // joker penalty at round end
+RK.MAX_TURNS = 3000;                                     // safety cap on turns per game
+
+function keyOf(color, num) { return color * 13 + (num - 1); }
+RK.keyOf = keyOf;
+RK.keyName = function (k) {
+  if (k === RK.JKEY) return 'Joker';
+  return ((k % 13) + 1) + ' ' + (RK.COLOR_EN ? RK.COLOR_EN[Math.floor(k / 13)] : String(Math.floor(k / 13)));
+};
+
+/* ---------------- Reproducible RNG (mulberry32 + string hashing) ---------------- */
+function hashSeed(str) {
+  str = String(str);
+  var h = 1779033703 ^ str.length;
+  for (var i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return (h ^ (h >>> 16)) >>> 0;
+}
+RK.hashSeed = hashSeed;
+
+function RNG(seedStr) {
+  this.seed = String(seedStr);
+  var s = hashSeed(this.seed);
+  this.fn = (function (a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  })(s);
+}
+RNG.prototype.next = function () { return this.fn(); };
+RNG.prototype.int = function (n) { return Math.floor(this.fn() * n); };
+RNG.prototype.shuffle = function (arr) {
+  for (var i = arr.length - 1; i > 0; i--) {
+    var j = this.int(i + 1);
+    var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  }
+  return arr;
+};
+RK.RNG = RNG;
+
+var uidCounter = 0;
+function uid(prefix) { return (prefix || 'S') + (++uidCounter); }
+
+/* ---------------- Tiles and pool ---------------- */
+/* tile: {id, color(0-3|-1), num(1-13|0), joker(bool), jokerAs:{c,n}|null}
+ * A joker on the table must carry jokerAs (its fixed represented role);
+ * a joker held in hand has jokerAs = null */
+function createDeck() {
+  var tiles = [], id = 0, c, n, copy;
+  for (copy = 0; copy < 2; copy++)
+    for (c = 0; c < 4; c++)
+      for (n = 1; n <= 13; n++)
+        tiles.push({ id: 'T' + (id++), color: c, num: n, joker: false, jokerAs: null });
+  tiles.push({ id: 'J1', color: -1, num: 0, joker: true, jokerAs: null });
+  tiles.push({ id: 'J2', color: -1, num: 0, joker: true, jokerAs: null });
+  return tiles;
+}
+RK.createDeck = createDeck;
+
+/* Total rack value (for end-of-round scoring: jokers count as 30) */
+function rackValue(tiles) {
+  var s = 0;
+  for (var i = 0; i < tiles.length; i++)
+    s += tiles[i].joker ? RK.JOKER_PENALTY : tiles[i].num;
+  return s;
+}
+RK.rackValue = rackValue;
+
+/* ---------------- Set validation (fixed-role semantics, for table checks) ---
+ * Every joker in a table set has already fixed its represented (color,num);
+ * validation: group = same number, distinct colors, 3-4 tiles;
+ * run = same color, consecutive numbers, >= 3 tiles (1-13, no wrap-around).
+ * roles (optional): {tileId: {c,n}} role overrides — a pure-function dry run
+ * of a materialization plan */
+function tileRole(t, roles) {
+  if (!t.joker) return { c: t.color, n: t.num };
+  var r = roles ? roles[t.id] : null;
+  return r || t.jokerAs;
+}
+
+function analyzeSetRoles(tiles, roles) {
+  var i, r, res = { valid: false, type: null, value: 0, sorted: null };
+  if (!tiles || tiles.length < 3) return res;
+  var rl = [];
+  for (i = 0; i < tiles.length; i++) {
+    r = tileRole(tiles[i], roles);
+    if (!r || r.n < 1 || r.n > 13 || r.c < 0 || r.c > 3) return res;
+    rl.push(r);
+  }
+  // Group: same number, distinct colors, 3-4 tiles in total
+  var sameNum = true;
+  for (i = 1; i < rl.length; i++) if (rl[i].n !== rl[0].n) { sameNum = false; break; }
+  if (sameNum) {
+    var seen = {}, ok = true;
+    for (i = 0; i < rl.length; i++) {
+      if (seen[rl[i].c]) { ok = false; break; }
+      seen[rl[i].c] = 1;
+    }
+    if (ok && rl.length <= 4) {
+      res.valid = true; res.type = 'group'; res.value = rl[0].n * rl.length;
+      res.sorted = tiles.slice().sort(function (a, b) {
+        return tileRole(a, roles).c - tileRole(b, roles).c;
+      });
+      return res;
+    }
+  }
+  // Run: same color, consecutive numbers
+  var sameColor = true;
+  for (i = 1; i < rl.length; i++) if (rl[i].c !== rl[0].c) { sameColor = false; break; }
+  if (sameColor) {
+    var nums = rl.map(function (r2) { return r2.n; }).sort(function (a, b) { return a - b; });
+    var consec = true;
+    for (i = 1; i < nums.length; i++) if (nums[i] !== nums[i - 1] + 1) { consec = false; break; }
+    if (consec) {
+      var sum = 0; for (i = 0; i < nums.length; i++) sum += nums[i];
+      res.valid = true; res.type = 'run'; res.value = sum;
+      res.sorted = tiles.slice().sort(function (a, b) {
+        return tileRole(a, roles).n - tileRole(b, roles).n;
+      });
+      return res;
+    }
+  }
+  return res;
+}
+RK.analyzeSet = function (tiles) { return analyzeSetRoles(tiles, null); };
+RK.analyzeSetRoles = analyzeSetRoles;
+
+/* Whether inserting one natural tile into an existing set stays legal
+ * (joker roles unchanged) */
+function canInsertNatural(setTiles, t) {
+  return analyzeSetRoles(setTiles.concat([t]), null).valid;
+}
+RK.canInsertNatural = canInsertNatural;
+
+/* Try to insert a hand joker into a set: enumerate the roles it could
+ * represent, return a usable role or null (pure function, no side effects) */
+function findJokerRole(setTiles, joker) {
+  var origin = joker.jokerAs;
+  var c, n, cand, found = null;
+  for (c = 0; c < 4 && !found; c++) {
+    for (n = 1; n <= 13; n++) {
+      joker.jokerAs = { c: c, n: n };
+      cand = analyzeSetRoles(setTiles.concat([joker]), null);
+      if (cand.valid) { found = { c: c, n: n }; break; }
+    }
+  }
+  joker.jokerAs = origin; /* fully restored (role assignment is deferred to commit time) */
+  return found;
+}
+RK.findJokerRole = findJokerRole;
+
+/* Joker retrieval feasibility (official rules):
+ * joker J sits in set S with role R; replace it with hand tile T:
+ *  - T matches R exactly (same number and color) -> legal (standard clause)
+ *  - S is exactly a 3-tile group -> T may be any missing color
+ *    (explicitly stated official clause)
+ * Returns whether the set stays valid after the replacement */
+function jokerReplaceable(setTiles, joker, tile) {
+  if (!joker.jokerAs) return false;
+  var R = joker.jokerAs;
+  if (!tile.joker && tile.num === R.n && tile.color === R.c) return true;
+  var others = setTiles.filter(function (t) { return t !== joker; });
+  if (others.length === 2 && setTiles.length === 3) {
+    var a = RK.analyzeSet(setTiles);
+    if (a.type === 'group') {
+      // 3-tile group: any missing color is allowed (official clause)
+      var roles = others.map(function (t) { return tileRole(t, null); });
+      if (!tile.joker && roles[0].n === tile.num && roles[1].n === tile.num &&
+          roles[0].c !== tile.color && roles[1].c !== tile.color) return true;
+    }
+  }
+  return false;
+}
+RK.jokerReplaceable = jokerReplaceable;
+
+/* ---------------- Utilities ---------------- */
+function makeSet(tiles) {
+  var a = RK.analyzeSet(tiles);
+  return { id: uid('S'), tiles: a.sorted || tiles.slice(), type: a.type, value: a.value };
+}
+RK.makeSet = makeSet;
+
+/* Build a set using a role override table (for materialization dry runs, pure) */
+function makeSetRoles(tiles, roles) {
+  var a = analyzeSetRoles(tiles, roles);
+  return { id: uid('S'), tiles: a.sorted || tiles.slice(), type: a.type, value: a.value };
+}
+RK.makeSetRoles = makeSetRoles;
+
+/* Commit a plan: write the role override table into the jokers (the only
+ * place where jokerAs is ever mutated) */
+function applyRoles(roles) {
+  for (var i = 0; i < roles.length; i++) roles[i].tile.jokerAs = roles[i].role;
+}
+RK.applyRoles = applyRoles;
+
+/* Hand ordering: by color, then number, jokers last */
+function sortHand(tiles) {
+  return tiles.slice().sort(function (a, b) {
+    if (a.joker !== b.joker) return a.joker ? 1 : -1;
+    if (a.color !== b.color) return a.color - b.color;
+    return a.num - b.num;
+  });
+}
+RK.sortHand = sortHand;
+
+/* Counting helpers: array length 53 (0-51 = natural tile keys, 52 = joker) */
+function emptyCounts() { var a = new Array(53); for (var i = 0; i < 53; i++) a[i] = 0; return a; }
+RK.emptyCounts = emptyCounts;
+
+function handCounts(tiles) {
+  var a = emptyCounts();
+  for (var i = 0; i < tiles.length; i++) {
+    var t = tiles[i];
+    if (t.joker) a[RK.JKEY]++; else a[keyOf(t.color, t.num)]++;
+  }
+  return a;
+}
+RK.handCounts = handCounts;
+
+function tableCounts(table) {
+  /* Table counts: each joker is counted under its fixed role's natural key
+   * (pseudo-natural tile semantics) */
+  var a = emptyCounts(), i, j, t, k;
+  for (i = 0; i < table.length; i++)
+    for (j = 0; j < table[i].tiles.length; j++) {
+      t = table[i].tiles[j];
+      k = t.joker ? keyOf(t.jokerAs.c, t.jokerAs.n) : keyOf(t.color, t.num);
+      a[k]++;
+    }
+  return a;
+}
+RK.tableCounts = tableCounts;
+
+function sumArr(a) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i]; return s; }
+RK.sumArr = sumArr;
+
+})(typeof window !== 'undefined' ? window : globalThis);
+/* ============================================================================
+ * Rummikub Official Rules Simulator — exact-cover AI solver
+ * Core idea: model "the best play for this turn" as a counting version of the
+ * Exact Cover problem:
+ *   - required: every table tile (jokers counted under their fixed roles)
+ *     must be covered
+ *   - available: table tiles + hand tiles (hand tiles are optional; the goal
+ *     is to play as many of them as possible)
+ *   - objective: max number of hand tiles played (branch-and-bound search
+ *     with node / time budget protection)
+ * Completeness argument (jokers only enumerate "missing slots"): if a plan
+ * places a joker on a slot that already has a natural tile, and that natural
+ * tile is used elsewhere, then swapping the roles of the joker and that
+ * natural tile yields an equivalent plan which is necessarily enumerated in
+ * the natural-tile anchor branch; a retrieved joker (required to cover, any
+ * role) is enumerated separately under "any role slot", so the search stays
+ * complete.
+ * ========================================================================== */
+(function (global) {
+'use strict';
+var RK = global.RK = global.RK || {};
+var keyOf = RK.keyOf, JKEY = RK.JKEY, emptyCounts = RK.emptyCounts;
+
+/* ---------- Combination enumeration helpers ---------- */
+function combos(arr, k) {
+  var res = [];
+  if (k === 0) return [[]];
+  if (k > arr.length) return [];
+  (function rec(start, cur) {
+    if (cur.length === k) { res.push(cur.slice()); return; }
+    for (var i = start; i <= arr.length - (k - cur.length); i++) {
+      cur.push(arr[i]); rec(i + 1, cur); cur.pop();
+    }
+  })(0, []);
+  return res;
+}
+RK.combos = combos;
+
+function valOfKey(k) { return k === JKEY ? 13 : (k % 13) + 1; }
+
+/* ---------- Candidate meld generation ----------
+ * A slot looks like {k: key, c: color, n: number, joker: bool, v: face value}
+ * The anchor = the (one) tile that must be contained in the candidate meld */
+
+/* Natural tile anchor (c0,n0): jokers only fill "missing slots"
+ * (completeness is guaranteed by the swap argument above) */
+function genCandidatesForNatural(av, c0, n0) {
+  var cands = [];
+  var i, j, x, y;
+  /* Group: same number n0, distinct colors, 3-4 tiles in total */
+  var others = [], missing = [];
+  for (var c = 0; c < 4; c++) {
+    if (c === c0) continue;
+    if (av[keyOf(c, n0)] > 0) others.push(c); else missing.push(c);
+  }
+  var J = av[JKEY];
+  for (var use = 2; use <= 3; use++) {
+    for (var jc = 0; jc <= Math.min(J, 2, use); jc++) {
+      var natNeed = use - jc;
+      if (natNeed > others.length) continue;
+      if (jc > missing.length) continue;
+      var natC = combos(others, natNeed), jokC = combos(missing, jc);
+      for (i = 0; i < natC.length; i++) {
+        for (j = 0; j < jokC.length; j++) {
+          var slots = [{ k: keyOf(c0, n0), c: c0, n: n0, joker: false, v: n0 }];
+          for (x = 0; x < natC[i].length; x++)
+            slots.push({ k: keyOf(natC[i][x], n0), c: natC[i][x], n: n0, joker: false, v: n0 });
+          for (y = 0; y < jokC[j].length; y++)
+            slots.push({ k: JKEY, c: jokC[j][y], n: n0, joker: true, v: n0 });
+          cands.push(slots);
+        }
+      }
+    }
+  }
+  /* Run: same-color consecutive window >= 3; missing numbers inside the
+   * window are filled by jokers */
+  for (var s = Math.max(1, n0 - 12); s <= n0; s++) {
+    for (var e = Math.max(n0, s + 2); e <= Math.min(13, s + 12); e++) {
+      var slots2 = [], needJ = 0;
+      for (var p = s; p <= e; p++) {
+        if (av[keyOf(c0, p)] > 0) slots2.push({ k: keyOf(c0, p), c: c0, n: p, joker: false, v: p });
+        else { slots2.push({ k: JKEY, c: c0, n: p, joker: true, v: p }); needJ++; }
+      }
+      if (needJ <= J) cands.push(slots2);
+    }
+  }
+  return cands;
+}
+
+/* Required joker anchor (a retrieved joker that must be used this turn):
+ * any role slot */
+function genCandidatesForRequiredJoker(req, av) {
+  var cands = [];
+  var J2 = av[JKEY] - 1;
+  var secondRequired = req[JKEY] - 1 > 0;
+  var i, j;
+  /* Group: the joker may take any color not occupied by natural tiles,
+   * at any number */
+  for (var n = 1; n <= 13; n++) {
+    var avail = [];
+    for (var c = 0; c < 4; c++) if (av[keyOf(c, n)] > 0) avail.push(c);
+    for (var size = 2; size <= 3; size++) {
+      if (size > avail.length) break;
+      var cs = combos(avail, size);
+      for (i = 0; i < cs.length; i++) {
+        var used = {}; for (j = 0; j < cs[i].length; j++) used[cs[i][j]] = 1;
+        var jcolor = -1;
+        for (var c2 = 0; c2 < 4; c2++) if (!used[c2]) { jcolor = c2; break; }
+        if (jcolor < 0) continue;
+        var slots = [];
+        for (j = 0; j < cs[i].length; j++)
+          slots.push({ k: keyOf(cs[i][j], n), c: cs[i][j], n: n, joker: false, v: n });
+        slots.push({ k: JKEY, c: jcolor, n: n, joker: true, v: n });
+        cands.push(slots);
+        /* Variant with two jokers in one group (2 natural + 2 jokers = 4) */
+        if (J2 >= 1 && size === 2) {
+          for (var c3 = 0; c3 < 4; c3++) {
+            if (used[c3] || c3 === jcolor) continue;
+            var isMissing = av[keyOf(c3, n)] === 0;
+            if (isMissing || secondRequired) {
+              var slots2 = slots.slice(0, 3).concat([{ k: JKEY, c: c3, n: n, joker: true, v: n }]);
+              cands.push(slots2);
             }
-            // Jokers
-            for (let i = 0; i < JOKER_COUNT; i++) {
-                newDeck.push({ id: `j${idCounter++}`, number: 0, color: 'joker', isJoker: true });
+          }
+        }
+      }
+    }
+  }
+  /* Run: the joker may sit at any window position (the other positions are
+   * natural tiles, or a second joker fills the gap) */
+  for (var cc = 0; cc < 4; cc++) {
+    for (var s = 1; s <= 11; s++) {
+      for (var e = s + 2; e <= 13; e++) {
+        for (var p = s; p <= e; p++) {
+          var base = [], zeros = [];
+          var q, q2, q3;
+          for (q = s; q <= e; q++) {
+            if (q === p) base.push({ k: JKEY, c: cc, n: q, joker: true, v: q });
+            else if (av[keyOf(cc, q)] > 0) base.push({ k: keyOf(cc, q), c: cc, n: q, joker: false, v: q });
+            else zeros.push(q);
+          }
+          if (zeros.length === 0) cands.push(base);
+          else if (zeros.length === 1 && J2 >= 1) {
+            base.push({ k: JKEY, c: cc, n: zeros[0], joker: true, v: zeros[0] });
+            cands.push(base);
+          }
+          /* Variant with two retrieved jokers in one meld (covers a very
+           * rare case) */
+          if (secondRequired && J2 >= 1 && zeros.length === 0) {
+            for (q2 = s; q2 <= e; q2++) {
+              if (q2 === p) continue;
+              var slots3 = [];
+              for (q3 = s; q3 <= e; q3++) {
+                if (q3 === p) slots3.push({ k: JKEY, c: cc, n: p, joker: true, v: p });
+                else if (q3 === q2) slots3.push({ k: JKEY, c: cc, n: q2, joker: true, v: q2 });
+                else slots3.push({ k: keyOf(cc, q3), c: cc, n: q3, joker: false, v: q3 });
+              }
+              cands.push(slots3);
             }
-            return newDeck;
+          }
         }
+      }
+    }
+  }
+  return cands;
+}
 
-        function shuffle(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
+/* Hand joker anchor (optional): fills "missing slots" only (same reasoning
+ * as the natural tile anchor) */
+function genCandidatesForHandJoker(av) {
+  var cands = [];
+  var J = av[JKEY];
+  var i, j;
+  for (var n = 1; n <= 13; n++) {
+    var avail = [], missingC = [];
+    for (var c = 0; c < 4; c++) {
+      if (av[keyOf(c, n)] > 0) avail.push(c); else missingC.push(c);
+    }
+    for (var size = 2; size <= 3; size++) {
+      if (size > avail.length) break;
+      var cs = combos(avail, size);
+      for (i = 0; i < cs.length; i++) {
+        var used = {}; for (j = 0; j < cs[i].length; j++) used[cs[i][j]] = 1;
+        for (var m = 0; m < missingC.length; m++) {
+          var slots = [];
+          for (j = 0; j < cs[i].length; j++)
+            slots.push({ k: keyOf(cs[i][j], n), c: cs[i][j], n: n, joker: false, v: n });
+          slots.push({ k: JKEY, c: missingC[m], n: n, joker: true, v: n });
+          cands.push(slots);
+          if (J >= 2 && size === 2) {
+            for (var m2 = m + 1; m2 < missingC.length; m2++) {
+              cands.push(slots.concat([{ k: JKEY, c: missingC[m2], n: n, joker: true, v: n }]));
             }
-            return array;
+          }
         }
-
-        function initGame() {
-            clearInterval(state.autoPlayTimer);
-            state.deck = shuffle(createDeck());
-            state.table = [];
-            state.players = [
-                { id: 0, name: 'Player 1 (AI)', tiles: [], score: 0, iceBroken: false },
-                { id: 1, name: 'Player 2 (AI)', tiles: [], score: 0, iceBroken: false },
-                { id: 2, name: 'Player 3 (AI)', tiles: [], score: 0, iceBroken: false }
-            ];
-            state.currentPlayer = 0;
-            state.phase = 'INIT';
-            state.logHistory = [];
-            
-            log('Game initialized. Deck created.');
-            updateUI();
-            updateButtons();
+      }
+    }
+  }
+  for (var cc = 0; cc < 4; cc++) {
+    for (var s = 1; s <= 11; s++) {
+      for (var e = s + 2; e <= 13; e++) {
+        for (var p = s; p <= e; p++) {
+          if (av[keyOf(cc, p)] > 0) continue;
+          var slots2 = [], need2 = -1;
+          for (var q = s; q <= e; q++) {
+            if (q === p) slots2.push({ k: JKEY, c: cc, n: q, joker: true, v: q });
+            else if (av[keyOf(cc, q)] > 0) slots2.push({ k: keyOf(cc, q), c: cc, n: q, joker: false, v: q });
+            else need2 = q;
+          }
+          if (need2 === -1) cands.push(slots2);
+          else if (J >= 2) {
+            slots2.push({ k: JKEY, c: cc, n: need2, joker: true, v: need2 });
+            cands.push(slots2);
+          }
         }
+      }
+    }
+  }
+  return cands;
+}
 
-        function dealTiles() {
-            state.players.forEach(p => {
-                p.tiles = [];
-                for (let i = 0; i < TILES_PER_PLAYER; i++) {
-                    if (state.deck.length > 0) p.tiles.push(state.deck.pop());
-                }
-                sortTiles(p.tiles);
-            });
-            state.phase = 'DEALT';
-            log('Tiles dealt. Game ready.');
-            updateUI();
+/* ---------- Exact-cover solver (branch & bound) ----------
+ * opts: {nodes, timeMs, minValue (ice-break 30), valueMode, minHandPlays}
+ * Returns {ok, chosen (candidate list), handUsed, jokersUsed, value, nodes,
+ * ms, capped}
+ * Performance: candidate melds are generated once at the root state and
+ * cached per anchor (the root available set is a superset of any deeper
+ * available set; deeper feasibility is checked dynamically by consume),
+ * avoiding re-enumeration at every node. */
+function solveCover(req0, av0, opts) {
+  opts = opts || {};
+  var t0 = Date.now();
+  var req = req0.slice(), av = av0.slice();
+  var budgetNodes = opts.nodes || 40000;
+  var deadline = t0 + (opts.timeMs || 150);
+  var valueMode = !!opts.valueMode, minValue = opts.minValue || 0;
+  var minHandPlays = opts.minHandPlays || 0;
+
+  var nodes = 0, capped = false, best = null;
+  var chosen = [];
+  var handUsed = 0, jokersUsed = 0, value = 0, optCount = 0, avVal = 0, reqSum = 0;
+  var i, k;
+  for (i = 0; i < 53; i++) {
+    optCount += av[i] - req[i];
+    avVal += av[i] * valOfKey(i);
+    reqSum += req[i];
+  }
+  /* Candidate caches (generated at the root state; avRoot/reqRoot are root
+   * snapshots, deeper feasibility is checked by consume) */
+  var candNat = Object.create(null);  /* natural anchor -> candidates */
+  var candJReq = null;                /* required-joker anchor candidates */
+  var candJOpt = null;                /* optional-joker anchor candidates */
+  var avRoot = av0.slice();
+  var reqRoot = req0.slice();
+  function getNatural(anchor) {
+    var c = candNat[anchor];
+    if (!c) {
+      c = buildCandidates(genCandidatesForNatural(avRoot, Math.floor(anchor / 13), (anchor % 13) + 1));
+      candNat[anchor] = c;
+    }
+    return c;
+  }
+  function getJokerReq() {
+    if (!candJReq) candJReq = buildCandidates(genCandidatesForRequiredJoker(reqRoot, avRoot));
+    return candJReq;
+  }
+  function getJokerOpt() {
+    if (!candJOpt) candJOpt = buildCandidates(genCandidatesForHandJoker(avRoot));
+    return candJOpt;
+  }
+  /* Deduplicate + static ordering (hand potential desc -> size desc;
+   * hp uses the root req) */
+  function buildCandidates(cands) {
+    var seen = Object.create(null), uniq = [], ci, si;
+    for (ci = 0; ci < cands.length; ci++) {
+      var parts = [];
+      for (si = 0; si < cands[ci].length; si++) {
+        var sl = cands[ci][si];
+        parts.push(sl.joker ? (valueMode ? ('J' + sl.c + ':' + sl.n) : 'J') : ('N' + sl.k));
+      }
+      var sig = parts.sort().join('|');
+      if (!seen[sig]) { seen[sig] = 1; uniq.push(cands[ci]); }
+    }
+    var scored = [];
+    for (ci = 0; ci < uniq.length; ci++) {
+      var hp = 0, slots = uniq[ci];
+      for (si = 0; si < slots.length; si++) {
+        var k3 = slots[si].joker ? JKEY : slots[si].k;
+        if (reqRoot[k3] === 0) hp++;
+      }
+      scored.push({ slots: slots, hp: hp, sz: slots.length });
+    }
+    scored.sort(function (a, b) { return b.hp - a.hp || b.sz - a.sz; });
+    return scored;
+  }
+
+  /* Static anchor order: constrainedness (potential) ascending; jokers are
+   * the most flexible -> last */
+  function pot(k) {
+    if (k === JKEY) return 99;
+    var c = Math.floor(k / 13), n = (k % 13) + 1, s = 0, c2;
+    for (c2 = 0; c2 < 4; c2++) if (c2 !== c && av0[keyOf(c2, n)] > 0) s += 2;
+    if (n - 1 >= 1 && av0[keyOf(c, n - 1)] > 0) s++;
+    if (n + 1 <= 13 && av0[keyOf(c, n + 1)] > 0) s++;
+    if (n - 2 >= 1 && av0[keyOf(c, n - 2)] > 0) s++;
+    if (n + 2 <= 13 && av0[keyOf(c, n + 2)] > 0) s++;
+    if (av0[JKEY] > 0) s += 1;
+    return s + Math.min(req0[k], 3);
+  }
+  var order = [];
+  for (i = 0; i < 53; i++) if (req[i] > 0) order.push(i);
+  order.sort(function (a, b) { return pot(a) - pot(b); });
+  if (req[JKEY] > 0) {
+    order = order.filter(function (x) { return x !== JKEY; });
+    order.push(JKEY);
+  }
+
+  function consume(slots) {
+    var undo = [], s, k2, wasReq;
+    for (var i2 = 0; i2 < slots.length; i2++) {
+      s = slots[i2]; k2 = s.joker ? JKEY : s.k;
+      if (av[k2] <= 0) { restore(undo); return false; }
+      wasReq = req[k2] > 0;
+      av[k2]--;
+      if (wasReq) { req[k2]--; reqSum--; }
+      else { handUsed++; optCount--; if (s.joker) jokersUsed++; }
+      value += s.v; avVal -= valOfKey(k2);
+      undo.push({ k: k2, joker: s.joker, wasReq: wasReq, v: s.v });
+    }
+    return undo;
+  }
+  function restore(undo) {
+    for (var i2 = undo.length - 1; i2 >= 0; i2--) {
+      var u = undo[i2];
+      av[u.k]++;
+      avVal += valOfKey(u.k);
+      value -= u.v;
+      if (u.wasReq) { req[u.k]++; reqSum++; }
+      else { handUsed--; optCount++; if (u.joker) jokersUsed--; }
+    }
+  }
+  function isBetter() {
+    if (!best) return true;
+    if (handUsed !== best.handUsed) return handUsed > best.handUsed;
+    if (jokersUsed !== best.jokersUsed) return jokersUsed < best.jokersUsed;
+    return value > best.value;
+  }
+
+  function dfs() {
+    if (nodes++ >= budgetNodes) { capped = true; return; }
+    if ((nodes & 63) === 0 && Date.now() > deadline) { capped = true; return; }
+    if (best && (handUsed + optCount < best.handUsed ||
+        (handUsed + optCount === best.handUsed && jokersUsed >= best.jokersUsed))) return;
+    if (valueMode && value + avVal < minValue) return;
+
+    var anchor = -1;
+    if (reqSum > 0) {
+      for (var oi = 0; oi < order.length; oi++) {
+        if (req[order[oi]] > 0) { anchor = order[oi]; break; }
+      }
+      if (anchor === -1) return; /* cannot happen (defensive) */
+    } else {
+      for (k = 0; k < 53; k++) if (av[k] > 0) { anchor = k; break; }
+      if (anchor === -1) {
+        if ((valueMode && value >= minValue) || (!valueMode && handUsed >= minHandPlays)) {
+          if (isBetter()) best = { handUsed: handUsed, jokersUsed: jokersUsed, value: value, chosen: chosen.slice() };
         }
+        return;
+      }
+    }
 
-        function sortTiles(tiles) {
-            tiles.sort((a, b) => {
-                if (a.isJoker) return 1;
-                if (b.isJoker) return -1;
-                if (a.color !== b.color) return COLORS.indexOf(a.color) - COLORS.indexOf(b.color);
-                return a.number - b.number;
-            });
+    /* Candidates: generated at the root state and cached per anchor (deeper
+     * feasibility is checked dynamically by consume) */
+    var scored;
+    if (anchor === JKEY) {
+      scored = reqSum > 0 ? getJokerReq() : getJokerOpt();
+    } else {
+      scored = getNatural(anchor);
+    }
+
+    for (var ci = 0; ci < scored.length; ci++) {
+      var undo = consume(scored[ci].slots);
+      if (undo) {
+        chosen.push(scored[ci].slots);
+        dfs();
+        chosen.pop();
+      }
+      restore(undo);
+      if (capped) return;
+    }
+
+    /* Optional phase: skip this one tile of the current anchor */
+    if (reqSum === 0) {
+      av[anchor]--; optCount--; avVal -= valOfKey(anchor);
+      dfs();
+      av[anchor]++; optCount++; avVal += valOfKey(anchor);
+    }
+  }
+  dfs();
+  var res = { ok: !!best, nodes: nodes, ms: Date.now() - t0, capped: capped, searches: 1 };
+  if (best) {
+    res.chosen = best.chosen; res.handUsed = best.handUsed;
+    res.jokersUsed = best.jokersUsed; res.value = best.value;
+  }
+  return res;
+}
+RK.solveCover = solveCover;
+
+/* ---------- Materialization: turn the solver result into concrete table /
+ * hand states (pure function, does not mutate shared tiles) ----------
+ * Returns {sets, hand, playedIds, roles: [{tile, role}]};
+ * jokerAs is actually written only by RK.applyRoles at commit time */
+function materialize(sol, table, hand, retrieval) {
+  var natTable = {}, roleJokers = {}, natHand = {};
+  var freeJokers = []; /* [{tile, fromHand}] retrieved jokers come first */
+  function push(map, k, t) { if (!map[k]) map[k] = []; map[k].push(t); }
+  var i, j, t, k;
+  for (i = 0; i < table.length; i++) {
+    for (j = 0; j < table[i].tiles.length; j++) {
+      t = table[i].tiles[j];
+      if (t.joker) {
+        if (retrieval && t === retrieval.J) freeJokers.push({ tile: t, fromHand: false });
+        else push(roleJokers, keyOf(t.jokerAs.c, t.jokerAs.n), t);
+      } else push(natTable, keyOf(t.color, t.num), t);
+    }
+  }
+  for (i = 0; i < hand.length; i++) {
+    t = hand[i];
+    if (t.joker) freeJokers.push({ tile: t, fromHand: true });
+    else push(natHand, keyOf(t.color, t.num), t);
+  }
+
+  var playedIds = [];
+  var newSets = [];
+  var roles = [];   /* [{tile, role}] */
+  var roleMap = {}; /* tileId -> role (for sorting / validation dry runs) */
+  for (i = 0; i < sol.chosen.length; i++) {
+    var slots = sol.chosen[i], tiles = [];
+    for (j = 0; j < slots.length; j++) {
+      var s = slots[j], nt = null, fromHand = false;
+      if (s.joker) {
+        var fj = freeJokers.shift();
+        if (!fj) return null;
+        nt = fj.tile; fromHand = fj.fromHand;
+        var role = { c: s.c, n: s.n };
+        roles.push({ tile: nt, role: role });
+        roleMap[nt.id] = role;
+      } else {
+        if (natTable[s.k] && natTable[s.k].length) nt = natTable[s.k].shift();
+        else if (roleJokers[s.k] && roleJokers[s.k].length) {
+          nt = roleJokers[s.k].shift();
+          roles.push({ tile: nt, role: { c: nt.jokerAs.c, n: nt.jokerAs.n } }); /* role unchanged, recorded explicitly */
+          roleMap[nt.id] = nt.jokerAs;
         }
+        else if (natHand[s.k] && natHand[s.k].length) { nt = natHand[s.k].shift(); fromHand = true; }
+        else return null;
+      }
+      if (fromHand) playedIds.push(nt.id);
+      tiles.push(nt);
+    }
+    newSets.push(RK.makeSetRoles(tiles, roleMap));
+  }
+  /* Leftovers: every source must be the hand (a retrieved joker must have
+   * been consumed) */
+  var newHand = [];
+  for (k in natHand) if (natHand.hasOwnProperty(k))
+    for (i = 0; i < natHand[k].length; i++) newHand.push(natHand[k][i]);
+  for (i = 0; i < freeJokers.length; i++) {
+    if (!freeJokers[i].fromHand) return null; /* assertion: the retrieved joker was not used */
+    newHand.push(freeJokers[i].tile);
+  }
+  return { sets: newSets, hand: RK.sortHand(newHand), playedIds: playedIds, roles: roles };
+}
+RK.materialize = materialize;
 
-        // --- AI Logic (Improved) ---
-
-        function simulateTurn() {
-            if (state.phase !== 'DEALT' && state.phase !== 'RUNNING') return;
-            state.phase = 'RUNNING';
-
-            const player = state.players[state.currentPlayer];
-            log(`--- ${player.name}'s Turn ---`);
-            
-            let moveMade = false;
-            let usedTiles = []; // IDs of tiles used this turn
-
-            // 1. Try to Break Ice
-            if (!player.iceBroken) {
-                const result = findBestMeld(player.tiles, ICEBREAKER_SCORE);
-                if (result) {
-                    playMeld(player, result.melds);
-                    player.iceBroken = true;
-                    log(`❄️ Broke Ice with ${result.score} points!`);
-                    moveMade = true;
-                }
-            } else {
-                // 2. Try to Manipulate Table (Advanced: currently simplified to adding)
-                // Simplified: Try to extend existing sets
-                if (!moveMade) moveMade = tryExtendTable(player);
-
-                // 3. Try to Play New Sets (min 1 point if ice broken)
-                if (!moveMade) {
-                    const result = findBestMeld(player.tiles, 0); // Any valid set
-                    if (result) {
-                        playMeld(player, result.melds);
-                        log(`Played new set(s) worth ${result.score} pts.`);
-                        moveMade = true;
-                    }
-                }
-
-                // 4. Try Joker Retrieval (Simplified for stability)
-                // Future improvement: Add complex joker logic here.
-            }
-
-            // 5. Draw or Pass
-            if (!moveMade) {
-                if (state.deck.length > 0) {
-                    const tile = state.deck.pop();
-                    player.tiles.push(tile);
-                    sortTiles(player.tiles);
-                    log(`No moves. Drew a tile.`);
-                } else {
-                    log(`No moves & Deck empty. PASS.`);
-                }
-            }
-
-            // Check Win
-            if (player.tiles.length === 0) {
-                endGame(player);
-                return;
-            }
-
-            nextTurn();
+/* ---------- Baseline strategy (safety net): extend existing sets directly
+ * + open new sets from the hand (pure function) ---------- */
+function incrementalPlay(table, hand, budget) {
+  var work = table.map(function (s) { return s.tiles.slice(); });
+  var handArr = hand.slice();
+  var playedIds = [];
+  var roles = [];    /* [{tile, role}] role assignment deferred to commit */
+  var roleMap = {};  /* tileId -> role (for sorting / validation dry runs) */
+  var changed = true;
+  while (changed) {
+    changed = false;
+    for (var si = 0; si < work.length && !changed; si++) {
+      var arr = work[si];
+      for (var hi = 0; hi < handArr.length && !changed; hi++) {
+        var t = handArr[hi];
+        if (!t.joker && RK.canInsertNatural(arr, t)) {
+          arr.push(t); handArr.splice(hi, 1); playedIds.push(t.id);
+          changed = true;
         }
-
-        function findBestMeld(hand, minScore) {
-            // Simple heuristic: Find runs first, then groups, try to meet minScore
-            // Deep copy hand for simulation
-            let simHand = hand.map(t => ({...t}));
-            
-            // Try to find combinations
-            // This is a greedy approximation for performance in browser
-            let potentialMelds = [];
-            
-            // Detect Groups (same number, diff color)
-            const numMap = {};
-            simHand.filter(t => !t.isJoker).forEach(t => {
-                if (!numMap[t.number]) numMap[t.number] = [];
-                numMap[t.number].push(t);
-            });
-            
-            for (let num = 13; num >= 1; num--) {
-                if (numMap[num] && numMap[num].length >= 3) {
-                    // Unique colors
-                    const uniqueColors = [];
-                    const seenColors = new Set();
-                    numMap[num].forEach(t => {
-                        if (!seenColors.has(t.color)) {
-                            seenColors.add(t.color);
-                            uniqueColors.push(t);
-                        }
-                    });
-                    if (uniqueColors.length >= 3) {
-                        potentialMelds.push({
-                            type: 'group',
-                            tiles: uniqueColors.slice(0, 4), // max 4
-                            score: num * Math.min(uniqueColors.length, 4)
-                        });
-                    }
-                }
-            }
-
-            // Detect Runs (same color, consecutive)
-            const colorMap = {};
-            simHand.filter(t => !t.isJoker).forEach(t => {
-                if (!colorMap[t.color]) colorMap[t.color] = [];
-                colorMap[t.color].push(t.number);
-            });
-
-            for (const color in colorMap) {
-                const nums = [...new Set(colorMap[color])].sort((a,b) => a-b);
-                // Find consecutive sequences
-                for (let i = 0; i < nums.length - 2; i++) {
-                    // Check if nums[i], nums[i]+1, nums[i]+2 exist
-                    // This is a simplified run finder
-                    let start = nums[i];
-                    let seq = [start];
-                    for (let j = i+1; j < nums.length; j++) {
-                        if (nums[j] === seq[seq.length-1] + 1) {
-                            seq.push(nums[j]);
-                        }
-                    }
-                    if (seq.length >= 3) {
-                        const tiles = seq.map(n => simHand.find(t => t.color === color && t.number === n && !t.used));
-                        if (tiles.every(t => t)) {
-                            potentialMelds.push({
-                                type: 'run',
-                                tiles: tiles,
-                                score: sum(seq)
-                            });
-                        }
-                    }
-                }
-            }
-
-            // Greedy selection to meet minScore
-            // Sort by score desc
-            potentialMelds.sort((a,b) => b.score - a.score);
-            
-            // Try to combine melds
-            let selectedMelds = [];
-            let totalScore = 0;
-            let usedIds = new Set();
-
-            // Simple logic: Just pick the highest scoring meld that meets criteria first
-            // Real AI would try combinations, but we need stability.
-            for (const meld of potentialMelds) {
-                // Check if tiles overlap
-                const overlap = meld.tiles.some(t => usedIds.has(t.id));
-                if (!overlap) {
-                    // Check score constraint
-                    // If we need minScore, we might need to combine.
-                    // For simplicity in this refactor, we try single best melds first
-                    // If icebreaker, we NEED 30.
-                    // If high value meld found > 30, use it.
-                    
-                    // Greedy add
-                    selectedMelds.push(meld);
-                    meld.tiles.forEach(t => usedIds.add(t.id));
-                    totalScore += meld.score;
-
-                    // If we meet minScore, break
-                    if (minScore > 0 && totalScore >= minScore) break;
-                }
-            }
-
-            if (minScore > 0 && totalScore < minScore) return null; // Failed to break ice
-            
-            // If not icebreaking, just return any found melds (totalScore can be 0 if no melds found)
-            if (selectedMelds.length === 0) return null;
-
-            return { melds: selectedMelds, score: totalScore };
+      }
+      if (changed) break;
+      for (var hj = 0; hj < handArr.length && !changed; hj++) {
+        var jt = handArr[hj];
+        if (jt.joker) {
+          var role = RK.findJokerRole(arr, jt);
+          if (role) {
+            roles.push({ tile: jt, role: role });
+            roleMap[jt.id] = role;
+            arr.push(jt); handArr.splice(hj, 1); playedIds.push(jt.id);
+            changed = true;
+          }
         }
+      }
+    }
+  }
+  /* Open new sets from the remaining hand tiles */
+  if (handArr.length >= 3) {
+    var sol = solveCover(emptyCounts(), RK.handCounts(handArr),
+      { minHandPlays: 0, nodes: Math.min(budget.nodes, 8000), timeMs: Math.min(budget.timeMs, 30) });
+    if (sol.ok && sol.handUsed >= 3) {
+      var mat = materialize(sol, [], handArr, null);
+      if (mat) {
+        for (var q = 0; q < mat.sets.length; q++) work.push(mat.sets[q].tiles);
+        handArr = mat.hand;
+        playedIds = playedIds.concat(mat.playedIds);
+        roles = roles.concat(mat.roles);
+        for (var r2 = 0; r2 < mat.roles.length; r2++) roleMap[mat.roles[r2].tile.id] = mat.roles[r2].role;
+      }
+    }
+  }
+  if (playedIds.length === 0) return null;
+  var out = [];
+  for (var w = 0; w < work.length; w++) out.push(RK.makeSetRoles(work[w], roleMap));
+  return { table: out, hand: RK.sortHand(handArr), playedIds: playedIds, roles: roles };
+}
+RK.incrementalPlay = incrementalPlay;
 
-        function playMeld(player, melds) {
-            const idsToRemove = new Set();
-            melds.forEach(meld => {
-                // Add to table
-                const newSet = { id: uid(), type: meld.type, tiles: meld.tiles };
-                state.table.push(newSet);
-                
-                // Mark for removal
-                meld.tiles.forEach(t => idsToRemove.add(t.id));
-            });
-            
-            // Remove from hand
-            player.tiles = player.tiles.filter(t => !idsToRemove.has(t.id));
+/* ---------- Joker retrieval option enumeration (official rules) ---------- */
+function findRetrievalOptions(table, hand) {
+  var opts = [];
+  var si, ji, hi, sj, ti;
+  for (si = 0; si < table.length; si++) {
+    var tiles = table[si].tiles;
+    for (ji = 0; ji < tiles.length; ji++) {
+      var J = tiles[ji];
+      if (!J.joker || !J.jokerAs) continue;
+      for (hi = 0; hi < hand.length; hi++) {
+        var T = hand[hi];
+        if (T.joker) continue;
+        if (RK.jokerReplaceable(tiles, J, T)) opts.push({ J: J, T: T, fromHand: true });
+      }
+      for (sj = 0; sj < table.length; sj++) {
+        if (sj === si) continue;
+        var ts = table[sj].tiles;
+        for (ti = 0; ti < ts.length; ti++) {
+          var T2 = ts[ti];
+          if (!T2.joker && T2.num === J.jokerAs.n && T2.color === J.jokerAs.c)
+            opts.push({ J: J, T: T2, fromHand: false });
         }
+      }
+    }
+  }
+  /* At most one option per (joker, source); hand sources come first */
+  var byJ = Object.create(null), out = [];
+  for (var i = 0; i < opts.length; i++) {
+    var key = opts[i].J.id + '|' + opts[i].fromHand;
+    if (!byJ[key]) { byJ[key] = 1; out.push(opts[i]); }
+  }
+  out.sort(function (a, b) { return (a.fromHand ? 0 : 1) - (b.fromHand ? 0 : 1); });
+  return out;
+}
+RK.findRetrievalOptions = findRetrievalOptions;
 
-        function tryExtendTable(player) {
-            // Try to add a tile to existing runs
-            // Very simplified: Check ends of runs
-            for (let set of state.table) {
-                if (set.type === 'run') {
-                    const lastTile = set.tiles[set.tiles.length - 1];
-                    const firstTile = set.tiles[0];
-                    
-                    // Try to extend end
-                    if (lastTile.number < 13) {
-                        const nextTile = player.tiles.find(t => !t.isJoker && t.color === lastTile.color && t.number === lastTile.number + 1);
-                        if (nextTile) {
-                            set.tiles.push(nextTile);
-                            player.tiles = player.tiles.filter(t => t.id !== nextTile.id);
-                            log(`Extended run with ${nextTile.number}${getColorSymbol(nextTile.color)}`);
-                            return true;
-                        }
-                    }
-                    
-                    // Try to extend start
-                    if (firstTile.number > 1) {
-                        const prevTile = player.tiles.find(t => !t.isJoker && t.color === firstTile.color && t.number === firstTile.number - 1);
-                        if (prevTile) {
-                            set.tiles.unshift(prevTile);
-                            player.tiles = player.tiles.filter(t => t.id !== prevTile.id);
-                            log(`Extended run with ${prevTile.number}${getColorSymbol(prevTile.color)}`);
-                            return true;
-                        }
-                    }
-                }
-            }
-            return false;
-        }
+/* ---------- Turn solver (after breaking the ice): pick the best of
+ * baseline / global rearrangement / joker retrieval ---------- */
+function solveTurnPostMeld(table, hand, budget) {
+  var t0 = Date.now();
+  var totalNodes = 0, searches = 0;
 
-        function nextTurn() {
-            state.currentPlayer = (state.currentPlayer + 1) % state.players.length;
-            updateUI();
-        }
+  var req = RK.tableCounts(table);
+  var av = req.slice();
+  var hc = RK.handCounts(hand);
+  for (var i = 0; i < 53; i++) av[i] += hc[i];
 
-        function endGame(winner) {
-            state.phase = 'ENDED';
-            log(`🏆 GAME OVER! ${winner.name} wins!`);
-            clearInterval(state.autoPlayTimer);
-            updateButtons();
-            updateUI();
-        }
+  /* 1) Baseline */
+  var base = incrementalPlay(table, hand, budget);
+  searches++;
+  var bestPlan = base
+    ? { kind: 'baseline', table: base.table, hand: base.hand, playedIds: base.playedIds, roles: base.roles, retrieval: null }
+    : null;
+  if (bestPlan && bestPlan.hand.length === 0) {
+    bestPlan.stats = { nodes: 0, searches: searches, ms: Date.now() - t0 };
+    bestPlan.manipulated = tableChanged(table, bestPlan.table);
+    return bestPlan; /* the rack is already empty, nothing can be better */
+  }
 
-        // --- UI & Rendering ---
+  /* 2) Global exact cover (includes table rearrangement) */
+  var plain = solveCover(req, av, { minHandPlays: 1, nodes: budget.nodes, timeMs: budget.timeMs });
+  totalNodes += plain.nodes; searches++;
+  if (plain.ok && plain.handUsed >= 1) {
+    var mat = materialize(plain, table, hand, null);
+    if (mat && (!bestPlan || mat.hand.length < bestPlan.hand.length)) {
+      bestPlan = { kind: 'cover', table: mat.sets, hand: mat.hand, playedIds: mat.playedIds, roles: mat.roles, retrieval: null };
+    }
+  }
+  if (bestPlan && bestPlan.hand.length === 0) {
+    bestPlan.stats = { nodes: totalNodes, searches: searches, ms: Date.now() - t0 };
+    bestPlan.manipulated = tableChanged(table, bestPlan.table);
+    return bestPlan; /* the rack is already empty, nothing can be better */
+  }
 
-        function updateUI() {
-            // Deck
-            DOM.deck.textContent = state.deck.length;
+  /* 3) Joker retrieval */
+  var rets = findRetrievalOptions(table, hand).slice(0, 4);
+  for (var r = 0; r < rets.length; r++) {
+    if (bestPlan && bestPlan.hand.length === 0) break; /* the rack is already empty */
+    var o = rets[r];
+    var req2 = req.slice(), av2 = av.slice();
+    var rj = keyOf(o.J.jokerAs.c, o.J.jokerAs.n);
+    req2[rj]--; av2[rj]--;
+    if (o.fromHand) req2[keyOf(o.T.color, o.T.num)]++;
+    av2[JKEY]++; req2[JKEY]++; /* the retrieved joker must be used this turn */
+    var sol = solveCover(req2, av2,
+      { minHandPlays: o.fromHand ? 0 : 1, nodes: budget.nodes, timeMs: budget.timeMs });
+    totalNodes += sol.nodes; searches++;
+    if (sol.ok && sol.handUsed >= (o.fromHand ? 0 : 1)) {
+      var mat2 = materialize(sol, table, hand, o);
+      if (mat2 && (!bestPlan || mat2.hand.length < bestPlan.hand.length)) {
+        bestPlan = { kind: 'retrieval', table: mat2.sets, hand: mat2.hand, playedIds: mat2.playedIds, roles: mat2.roles, retrieval: o };
+      }
+    }
+  }
 
-            // Players
-            DOM.players.innerHTML = state.players.map((p, i) => `
-                <div class="player-box ${i === state.currentPlayer ? 'active' : ''}">
-                    <div class="player-header">
-                        <span>${p.name}</span>
-                        <span>
-                            ${p.iceBroken ? '<span class="status-badge badge-ice">Ice Broken</span>' : '<span class="status-badge badge-no-ice">Ice Intact</span>'}
-                            <span style="margin-left: 5px">${p.tiles.length} tiles</span>
-                        </span>
-                    </div>
-                    <div class="tiles-container">
-                        ${p.tiles.map(t => renderTile(t)).join('')}
-                    </div>
-                </div>
-            `).join('');
+  if (bestPlan) {
+    bestPlan.stats = { nodes: totalNodes, searches: searches, ms: Date.now() - t0 };
+    bestPlan.manipulated = tableChanged(table, bestPlan.table);
+  }
+  return bestPlan;
+}
+RK.solveTurnPostMeld = solveTurnPostMeld;
 
-            // Table
-            if (state.table.length === 0) {
-                DOM.table.innerHTML = '<div style="opacity: 0.5; width: 100%; text-align: center; padding-top: 30px;">Table is empty.</div>';
-            } else {
-                DOM.table.innerHTML = state.table.map(set => `
-                    <div class="set-group">
-                        <div class="set-info">${set.type} (${set.tiles.length})</div>
-                        ${set.tiles.map(t => renderTile(t)).join('')}
-                    </div>
-                `).join('');
-            }
+/* Whether the table was rearranged (set count or membership changed beyond
+ * plain appending) */
+function tableChanged(oldTable, newTable) {
+  if (oldTable.length !== newTable.length) return true;
+  var sig = function (t) { return t.tiles.map(function (x) { return x.id; }).sort().join(','); };
+  var oldSigs = oldTable.map(sig).sort().join(';');
+  var newSigs = newTable.map(sig).sort().join(';');
+  return oldSigs !== newSigs;
+}
 
-            // Status
-            const current = state.players[state.currentPlayer];
-            DOM.status.innerHTML = state.phase === 'ENDED' ? 
-                `Game Over. Winner: ${state.players.find(p=>p.tiles.length===0)?.name}` :
-                `Turn: ${current?.name || 'Waiting...'}`;
-        }
+})(typeof window !== 'undefined' ? window : globalThis);
+/* ============================================================================
+ * Rummikub Official Rules Simulator — game controller
+ * Turn flow / draw-for-start / initial meld / win detection / official
+ * scoring / game statistics / batch simulation
+ * ========================================================================== */
+(function (global) {
+'use strict';
+var RK = global.RK = global.RK || {};
 
-        function renderTile(t) {
-            if (t.isJoker) {
-                return `<div class="tile joker"><div class="tile-number">🃏</div></div>`;
-            }
-            return `
-                <div class="tile ${t.color}">
-                    <div class="tile-number">${t.number}</div>
-                    <div class="tile-small">${getColorSymbol(t.color)}</div>
-                </div>
-            `;
-        }
+var PLAYER_NAMES = ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
 
-        function log(msg) {
-            const time = new Date().toLocaleTimeString();
-            state.logHistory.push({ time, msg });
-            DOM.log.innerHTML = state.logHistory.slice(-50).map(l => 
-                `<div class="log-entry"><span class="log-time">[${l.time}]</span> ${l.msg}</div>`
-            ).join('');
-            DOM.log.scrollTop = DOM.log.scrollHeight;
-        }
+/* ---------- Label helpers (shared by log and UI, all English) ---------- */
+var COLOR_EN = ['Red', 'Blue', 'Orange', 'Black'];
+RK.COLOR_EN = COLOR_EN;
+RK.tileLabel = function (t) {
+  if (t.joker) return t.jokerAs ? ('Joker(' + t.jokerAs.n + ' ' + COLOR_EN[t.jokerAs.c] + ')') : 'Joker';
+  return t.num + ' ' + COLOR_EN[t.color];
+};
+RK.setLabel = function (set) {
+  var a = RK.analyzeSet(set.tiles);
+  return (a.type === 'group' ? 'Group' : 'Run') + '[' + set.tiles.map(RK.tileLabel).join(' ') + ']';
+};
 
-        function updateButtons() {
-            DOM.btnNew.disabled = false;
-            DOM.btnDeal.disabled = state.phase !== 'INIT';
-            DOM.btnTurn.disabled = state.phase !== 'DEALT' && state.phase !== 'RUNNING';
-            DOM.btnAuto.disabled = state.phase !== 'DEALT' && state.phase !== 'RUNNING';
-        }
+/* ---------- Game ---------- */
+function Game(config) {
+  config = config || {};
+  this.playerCount = Math.max(2, Math.min(4, config.players || 4));
+  this.seed = String(config.seed != null ? config.seed :
+    ('auto-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1e9).toString(36)));
+  this.budget = config.budget || { nodes: 60000, timeMs: 200 };
+  this.rng = new RK.RNG(this.seed);
 
-        // --- Event Listeners ---
-        
-        DOM.btnNew.onclick = () => { initGame(); updateButtons(); };
-        DOM.btnDeal.onclick = () => { dealTiles(); updateButtons(); };
-        DOM.btnTurn.onclick = simulateTurn;
-        
-        DOM.btnAuto.onclick = () => {
-            let count = 0;
-            clearInterval(state.autoPlayTimer);
-            state.autoPlayTimer = setInterval(() => {
-                if (state.phase === 'ENDED' || count >= 20) {
-                    clearInterval(state.autoPlayTimer);
-                    return;
-                }
-                simulateTurn();
-                count++;
-            }, 1000);
-        };
+  this.players = [];
+  for (var i = 0; i < this.playerCount; i++) {
+    this.players.push({
+      idx: i, name: PLAYER_NAMES[i], tiles: [],
+      melded: false, meldTurn: -1, meldValue: 0, score: 0
+    });
+  }
+  this.table = [];
+  this.deck = [];
+  this.turnIdx = 0;
+  this.turnNo = 0;
+  this.passStreak = 0;
+  this.over = false;
+  this.result = null;
+  this.firstPlayer = 0;
+  this.firstDraws = null;
+  this.stats = {
+    draws: 0, passes: 0, retrievals: 0, manipulations: 0,
+    maxSinglePlay: 0, solverNodes: 0, solverMs: 0, cappedTurns: 0, turnCount: 0
+  };
+  this._setup();
+}
 
-        // Init
-        updateButtons();
-    })();
-    </script>
+/* Draw for start (official rule): every player draws and reveals one tile,
+ * the highest tile starts; jokers / ties trigger a redraw */
+Game.prototype._setup = function () {
+  var deck = RK.createDeck();
+  this.rng.shuffle(deck);
+  var tries = 0, self = this;
+  while (tries++ < 60) {
+    var draws = [], hasJoker = false, i;
+    for (i = 0; i < this.playerCount; i++) {
+      var t = deck.pop();
+      if (t.joker) hasJoker = true;
+      draws.push({ idx: i, tile: t });
+    }
+    if (hasJoker) {
+      for (i = 0; i < draws.length; i++) deck.push(draws[i].tile);
+      this.rng.shuffle(deck);
+      continue;
+    }
+    var maxV = 0;
+    for (i = 0; i < draws.length; i++) maxV = Math.max(maxV, draws[i].tile.num);
+    var tied = draws.filter(function (d) { return d.tile.num === maxV; });
+    for (i = 0; i < draws.length; i++) deck.push(draws[i].tile);
+    this.rng.shuffle(deck);
+    if (tied.length === 1) {
+      this.firstPlayer = tied[0].idx;
+      this.firstDraws = draws.map(function (d) {
+        return { idx: d.idx, num: d.tile.num, color: d.tile.color };
+      });
+      break;
+    }
+  }
+  this.deck = deck;
+  for (var p = 0; p < this.playerCount; p++) {
+    var tiles = [];
+    for (var n = 0; n < RK.HAND_SIZE; n++) tiles.push(deck.pop());
+    this.players[p].tiles = RK.sortHand(tiles);
+  }
+  this.turnIdx = this.firstPlayer;
+};
+
+Game.prototype._drawOrPass = function (p, ev) {
+  if (this.deck.length > 0) {
+    var t = this.deck.pop();
+    p.tiles.push(t);
+    p.tiles = RK.sortHand(p.tiles);
+    this.stats.draws++;
+    ev.type = 'draw';
+    ev.tile = t;
+    ev.handAfter = p.tiles.length;
+  } else {
+    this.stats.passes++;
+    this.passStreak++;
+    ev.type = 'pass';
+    ev.handAfter = p.tiles.length;
+  }
+};
+
+Game.prototype._stalemateWinner = function () {
+  var best = 0, i, a, b, va, vb;
+  for (i = 1; i < this.players.length; i++) {
+    a = this.players[i]; b = this.players[best];
+    va = RK.rackValue(a.tiles); vb = RK.rackValue(b.tiles);
+    if (va < vb || (va === vb && a.tiles.length < b.tiles.length)) best = i;
+  }
+  return best;
+};
+
+/* Official end-of-round scoring */
+Game.prototype._finish = function (mode, winnerIdx) {
+  this.over = true;
+  var n = this.players.length;
+  var racks = [], scores = [], i, j;
+  for (i = 0; i < n; i++) racks.push(RK.rackValue(this.players[i].tiles));
+  for (i = 0; i < n; i++) scores.push(0);
+
+  if (mode === 'win') {
+    var sum = 0;
+    for (i = 0; i < n; i++) {
+      if (i === winnerIdx) continue;
+      scores[i] = -racks[i];
+      sum += racks[i];
+    }
+    scores[winnerIdx] = sum;
+  } else {
+    var wv = racks[winnerIdx], sum2 = 0;
+    for (i = 0; i < n; i++) {
+      if (i === winnerIdx) continue;
+      scores[i] = -(racks[i] - wv);
+      sum2 += racks[i] - wv;
+    }
+    scores[winnerIdx] = sum2;
+  }
+  /* Official corner rule: a player who still has not broken the ice adds
+   * their rack value to the score of every other player */
+  var bonus = [];
+  for (i = 0; i < n; i++) {
+    if (!this.players[i].melded && racks[i] > 0) {
+      bonus.push({ idx: i, value: racks[i] });
+      for (j = 0; j < n; j++) if (j !== i) scores[j] += racks[i];
+    }
+  }
+  for (i = 0; i < n; i++) this.players[i].score = scores[i];
+  this.result = {
+    mode: mode, winnerIdx: winnerIdx, racks: racks, scores: scores,
+    bonus: bonus, turns: this.turnNo, seed: this.seed
+  };
+};
+
+/* Execute one turn, returns the event object (consumed by UI / log) */
+Game.prototype.step = function () {
+  if (this.over) return null;
+  var p = this.players[this.turnIdx];
+  this.turnNo++;
+  this.stats.turnCount = this.turnNo;
+  var ev = {
+    turn: this.turnNo, player: p.idx, playerName: p.name,
+    before: p.tiles.length, type: null, gameEnd: null
+  };
+  var t0 = Date.now();
+
+  if (!p.melded) {
+    /* ---- Initial meld: rack tiles only, >= 30 points (a joker scores the
+     * face value of the tile it stands for) ---- */
+    var sol = RK.solveCover(RK.emptyCounts(), RK.handCounts(p.tiles), {
+      valueMode: true, minValue: RK.INITIAL_MELD_MIN,
+      nodes: this.budget.nodes, timeMs: this.budget.timeMs
+    });
+    this.stats.solverNodes += sol.nodes;
+    this.stats.solverMs += sol.ms;
+    if (sol.capped) this.stats.cappedTurns++;
+    if (sol.ok && sol.value >= RK.INITIAL_MELD_MIN) {
+      var mat = RK.materialize(sol, [], p.tiles, null);
+      if (mat) {
+        RK.applyRoles(mat.roles); /* commit: write the joker roles */
+        /* The initial-meld sets are appended to the table (they may not
+         * cover sets already played by other players) */
+        this.table = this.table.concat(mat.sets);
+        p.tiles = mat.hand;
+        p.melded = true;
+        p.meldTurn = this.turnNo;
+        p.meldValue = sol.value;
+        this.passStreak = 0;
+        ev.type = 'meld';
+        ev.value = sol.value;
+        ev.playedIds = mat.playedIds;
+        ev.handAfter = p.tiles.length;
+        ev.solver = { nodes: sol.nodes, ms: sol.ms, capped: sol.capped };
+      } else {
+        this._drawOrPass(p, ev);
+      }
+    } else {
+      this._drawOrPass(p, ev);
+    }
+  } else {
+    /* ---- Regular turn: baseline / global rearrangement / joker retrieval,
+     * whichever is best ---- */
+    var plan = RK.solveTurnPostMeld(this.table, p.tiles, this.budget);
+    if (plan) {
+      RK.applyRoles(plan.roles); /* commit: write the joker roles */
+      if (plan.retrieval) {
+        this.stats.retrievals++;
+        ev.retrieval = { T: plan.retrieval.T, J: plan.retrieval.J, fromHand: plan.retrieval.fromHand };
+      }
+      if (plan.manipulated) this.stats.manipulations++;
+      this.stats.solverNodes += plan.stats.nodes;
+      this.stats.solverMs += plan.stats.ms;
+      var played = plan.playedIds.length;
+      if (played > this.stats.maxSinglePlay) this.stats.maxSinglePlay = played;
+      this.table = plan.table;
+      p.tiles = plan.hand;
+      this.passStreak = 0;
+      ev.type = 'play';
+      ev.kind = plan.kind;
+      ev.manipulated = plan.manipulated;
+      ev.playedIds = plan.playedIds;
+      ev.handAfter = p.tiles.length;
+      ev.solver = plan.stats;
+    } else {
+      this._drawOrPass(p, ev);
+    }
+  }
+
+  /* ---- Win detection ---- */
+  if (p.tiles.length === 0) {
+    this._finish('win', p.idx);
+    ev.gameEnd = this.result;
+  } else if (this.passStreak >= this.playerCount) {
+    var w = this._stalemateWinner();
+    this._finish('stalemate', w);
+    ev.gameEnd = this.result;
+  }
+  this.turnIdx = (this.turnIdx + 1) % this.playerCount;
+  ev.totalMs = Date.now() - t0;
+  return ev;
+};
+
+/* Run a whole game to the end (for batch simulation, no UI) */
+Game.prototype.runToEnd = function () {
+  var guard = 0;
+  while (!this.over && guard++ < RK.MAX_TURNS) this.step();
+  if (!this.over) {
+    this._finish('stalemate', this._stalemateWinner());
+  }
+  return this.result;
+};
+
+RK.Game = Game;
+
+/* ---------- Multi-game match statistics ---------- */
+function createMatch(playerCount) {
+  var per = [];
+  for (var i = 0; i < playerCount; i++)
+    per.push({ wins: 0, cumScore: 0, rackSum: 0, meldTurnSum: 0, meldedGames: 0, games: 0 });
+  return {
+    playerCount: playerCount, games: 0, wins: 0, stalemates: 0,
+    totalTurns: 0, retrievals: 0, manipulations: 0, draws: 0, per: per,
+    lastResult: null, avgTurns: function () { return this.games ? (this.totalTurns / this.games).toFixed(1) : '—'; }
+  };
+}
+RK.createMatch = createMatch;
+
+function addGameResult(match, game) {
+  match.games++;
+  match.lastResult = game.result;
+  match.totalTurns += game.result.turns;
+  if (game.result.mode === 'stalemate') match.stalemates++;
+  match.retrievals += game.stats.retrievals;
+  match.manipulations += game.stats.manipulations;
+  match.draws += game.stats.draws;
+  for (var i = 0; i < game.players.length; i++) {
+    var p = game.players[i], m = match.per[i];
+    m.games++;
+    m.cumScore += p.score;
+    m.rackSum += RK.rackValue(p.tiles);
+    if (p.melded) { m.meldedGames++; m.meldTurnSum += p.meldTurn; }
+    if (game.result.winnerIdx === i) m.wins++;
+  }
+}
+RK.addGameResult = addGameResult;
+
+/* Batch simulation */
+RK.BATCH_BUDGET = { nodes: 12000, timeMs: 40 };
+RK.batchSimulate = function (opts) {
+  var match = createMatch(opts.players);
+  for (var g = 0; g < opts.games; g++) {
+    var game = new RK.Game({
+      players: opts.players,
+      seed: opts.baseSeed + '#' + (g + 1),
+      budget: opts.budget || RK.BATCH_BUDGET
+    });
+    game.runToEnd();
+    addGameResult(match, game);
+    if (opts.onProgress) opts.onProgress(g + 1, opts.games, game);
+  }
+  return match;
+};
+
+})(typeof window !== 'undefined' ? window : globalThis);
+/* ============================================================================
+ * Rummikub Simulator — UI controller (all-English interface)
+ * Consumes RK engine events and renders: status, racks, table, activity log,
+ * statistics, session scoreboard, game-over modal, batch simulation.
+ * ========================================================================== */
+(function () {
+'use strict';
+var RK = window.RK;
+function $(id) { return document.getElementById(id); }
+
+/* ---------------- state ---------------- */
+var game = null;
+var session = { games: 0, per: [{}, {}, {}, {}] };   /* per[i] = {wins, cum, games} */
+var auto = { on: false, timer: null, delay: 600 };
+var batch = { running: false, cancel: false };
+var lastPlayedIds = null;
+var endedLogged = false;
+var GAME_BUDGET = { nodes: 40000, timeMs: 120 };
+
+function initSession() {
+  session = { games: 0, per: [] };
+  for (var i = 0; i < 4; i++) session.per.push({ wins: 0, cum: 0, games: 0 });
+}
+initSession();
+
+/* ---------------- small helpers ---------------- */
+function esc(s) { return String(s); }
+function fmtScore(v) { return (v > 0 ? '+' : '') + v; }
+function fmtK(n) { return n >= 1000000 ? (n / 1e6).toFixed(1) + 'M' : (n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n)); }
+function avg(arr) { return arr && arr.length ? arr.reduce(function (a, b) { return a + b; }, 0) / arr.length : 0; }
+function colorInitial(c) { return ['R', 'B', 'O', 'K'][c] || '?'; }
+
+/* ---------------- tile / set rendering ---------------- */
+function tileHtml(t, small, highlight) {
+  if (t.joker) {
+    var role = t.jokerAs ? (t.jokerAs.n + colorInitial(t.jokerAs.c)) : '';
+    return '<span class="tile jk' + (highlight ? ' fresh' : '') + '" title="' +
+      (t.jokerAs ? ('Joker representing ' + t.jokerAs.n + ' ' + RK.COLOR_EN[t.jokerAs.c]) : 'Joker (wild)') +
+      '">&#9733;' + (role ? '<i>' + role + '</i>' : '') + '</span>';
+  }
+  return '<span class="tile c' + t.color + (highlight ? ' fresh' : '') + '" title="' +
+    RK.tileLabel(t) + '">' + t.num + '</span>';
+}
+function setHtml(s) {
+  var a = RK.analyzeSet(s.tiles);
+  var info = a.type === 'group' ? ('Group of ' + (s.tiles[0] && !s.tiles[0].joker ? s.tiles[0].num : '?') + 's') : 'Run';
+  var tip = info + ' &middot; ' + a.value + ' pts &middot; ' + s.tiles.length + ' tiles';
+  var inner = '';
+  for (var i = 0; i < s.tiles.length; i++) {
+    var t = s.tiles[i];
+    inner += tileHtml(t, false, lastPlayedIds && lastPlayedIds.indexOf(t.id) >= 0);
+  }
+  return '<div class="set ' + (a.type || '') + '" title="' + tip + '"><span class="setInfo">' + info + '</span>' + inner + '</div>';
+}
+
+/* ---------------- activity log ---------------- */
+var logEl;
+function logLine(html, cls) {
+  if (!logEl) logEl = $('log');
+  var div = document.createElement('div');
+  div.className = 'logLine' + (cls ? ' ' + cls : '');
+  div.innerHTML = html;
+  var first = logEl.querySelector('.logLine');
+  if (logEl.firstChild && logEl.firstChild.nodeType === 1) logEl.insertBefore(div, logEl.firstChild);
+  else logEl.appendChild(div);
+  while (logEl.children.length > 220) logEl.removeChild(logEl.lastChild);
+  logEl.scrollTop = 0;
+}
+function pn(idx) { return '<b class="pn' + idx + '">' + game.players[idx].name + '</b>'; }
+function turnTag(no) { return '<span class="turnNo">#' + no + '</span>'; }
+
+function logEvent(ev) {
+  if (!ev) return;
+  var tag = turnTag(ev.turn);
+  if (ev.type === 'meld') {
+    logLine(tag + pn(ev.player) + ' makes the <b>initial meld</b> — ' + ev.value +
+      ' points, ' + ev.playedIds.length + ' tile' + (ev.playedIds.length > 1 ? 's' : '') +
+      ' from the rack. Initial meld requirement (30) met.', 'lg-turn lg-meld');
+  } else if (ev.type === 'play') {
+    var n = ev.playedIds.length;
+    var bits = [];
+    if (ev.retrieval) bits.push('retrieves a joker from the table');
+    if (ev.manipulated) bits.push('rearranges the table');
+    var tail = bits.length ? ' — ' + bits.join(', ') : '';
+    logLine(tag + pn(ev.player) + ' plays <b>' + n + '</b> tile' + (n > 1 ? 's' : '') +
+      ' from the rack' + tail + '.', 'lg-turn');
+  } else if (ev.type === 'draw') {
+    logLine(tag + pn(ev.player) + ' cannot play and draws the ' + RK.tileLabel(ev.tile) +
+      ' (' + game.deck.length + ' left in the pool).', 'lg-draw');
+  } else if (ev.type === 'pass') {
+    logLine(tag + pn(ev.player) + ' passes — no legal move, the pool is empty.', 'lg-pass');
+  }
+  if (ev.gameEnd) logGameEnd(ev.gameEnd);
+}
+
+function logGameEnd(r) {
+  if (endedLogged) return;
+  endedLogged = true;
+  var w = r.winnerIdx, wp = game.players[w];
+  if (r.mode === 'win') {
+    logLine('RUMMIKUB! ' + '<b>' + wp.name + '</b> plays their final tile and empties the rack — <b>' +
+      fmtScore(r.scores[w]) + '</b> points. Game over after ' + r.turns + ' turns.', 'lg-end');
+  } else {
+    logLine('The pool is empty and no player can move — <b>' + wp.name + '</b> wins with the lowest rack (' +
+      r.racks[w] + ' points). Score ' + fmtScore(r.scores[w]) + '.', 'lg-end');
+  }
+  var parts = [];
+  for (var i = 0; i < r.scores.length; i++) parts.push(game.players[i].name + ' ' + fmtScore(r.scores[i]));
+  logLine('Final scores: ' + parts.join(' &middot; '), 'lg-turn');
+  for (var b = 0; b < r.bonus.length; b++) {
+    logLine('Edge rule — ' + game.players[r.bonus[b].idx].name + ' never made the initial meld; their rack value (' +
+      r.bonus[b].value + ') is added to every opponent\'s score.', 'lg-turn');
+  }
+  logLine('Session totals updated (' + session.games + ' games this session).', '');
+}
+
+function clearLog() {
+  $('log').innerHTML = '';
+}
+
+/* ---------------- new game / turn flow ---------------- */
+function newGame() {
+  stopAuto();
+  endedLogged = false;
+  lastPlayedIds = null;
+  closeModal();
+  var players = parseInt($('players').value, 10) || 4;
+  var seed = $('seed').value.trim() || ('auto-' + new Date().toISOString().slice(0, 19).replace(/[:T-]/g, ''));
+  game = new RK.Game({ players: players, seed: seed, budget: GAME_BUDGET });
+  clearLog();
+  logLine('New game started — seed <b>' + esc(game.seed) + '</b>, ' + players + ' AI players, 106 tiles.', 'lg-event');
+  if (game.firstDraws) {
+    var ds = game.firstDraws.map(function (d) {
+      return game.players[d.idx].name + ' drew ' + d.num + ' ' + RK.COLOR_EN[d.color];
+    });
+    logLine('Opening draw: ' + ds.join(', ') + ' — <b>' + game.players[game.firstPlayer].name + '</b> holds the highest tile and starts.', 'lg-event');
+  }
+  logLine('14 tiles dealt to each player — ' + game.deck.length + ' tiles remain in the pool.', 'lg-event');
+  render();
+}
+
+function step() {
+  if (!game || game.over) return;
+  var setsBefore = game.table.length;
+  var ev = game.step();
+  lastPlayedIds = ev && ev.playedIds ? ev.playedIds : null;
+  if (ev && ev.type === 'meld') {
+    logLine('<span class="turnNo"></span>Initial meld added ' + (game.table.length - setsBefore) +
+      ' new set' + ((game.table.length - setsBefore) > 1 ? 's' : '') + ' to the table.', '');
+  }
+  if (ev && ev.gameEnd) onGameEnd();   /* session totals + modal before final log lines */
+  logEvent(ev);
+  render();
+}
+
+/* ---------------- auto play ---------------- */
+function autoTick() {
+  if (!auto.on) return;
+  if (game && !game.over) step();
+  if (!game || game.over) { stopAuto(); return; }
+  auto.timer = setTimeout(autoTick, auto.delay);
+}
+function startAuto() {
+  if (!game || game.over || batch.running) return;
+  auto.on = true;
+  $('btnAuto').textContent = 'Pause';
+  $('btnAuto').classList.add('running');
+  autoTick();
+}
+function stopAuto() {
+  auto.on = false;
+  if (auto.timer) { clearTimeout(auto.timer); auto.timer = null; }
+  var b = $('btnAuto');
+  if (b) { b.textContent = 'Auto Play'; b.classList.remove('running'); }
+  renderButtons();
+}
+
+/* ---------------- game over modal ---------------- */
+function closeModal() { $('modalWrap').classList.remove('show'); }
+function showGameOver() {
+  if (!game || !game.over) return;
+  var r = game.result, w = r.winnerIdx;
+  var rows = '';
+  for (var i = 0; i < game.players.length; i++) {
+    var p = game.players[i];
+    var sTotal = session.per[i] ? session.per[i].cum : 0;
+    rows += '<tr' + (i === w ? ' class="win"' : '') + '><td>' + p.name + '</td><td>' + r.racks[i] +
+      '</td><td>' + p.tiles.length + '</td><td>' + fmtScore(r.scores[i]) + '</td><td>' + fmtScore(sTotal) + '</td></tr>';
+  }
+  var bonus = '';
+  for (var b = 0; b < r.bonus.length; b++) {
+    bonus += '<div class="sub" style="color:var(--accent2)">Edge rule: ' + game.players[r.bonus[b].idx].name +
+      ' never made the initial meld — their rack value (' + r.bonus[b].value + ') was added to every opponent\'s score.</div>';
+  }
+  $('modal').innerHTML =
+    '<h2>' + (r.mode === 'win' ? 'RUMMIKUB!' : 'Game Over — Stalemate') + '</h2>' +
+    '<div class="sub">' + (r.mode === 'win'
+      ? game.players[w].name + ' emptied the rack and wins the game.'
+      : 'The pool is empty and no player can move. ' + game.players[w].name + ' wins with the lowest rack value.') +
+    ' &middot; ' + r.turns + ' turns &middot; seed ' + esc(r.seed) + '</div>' +
+    '<div class="banScore"><span class="big">' + (r.scores[w] > 0 ? '+' : '') + r.scores[w] + '</span><div><b>' +
+    game.players[w].name + '</b> wins<br><span style="color:var(--muted);font-size:12px">winner\'s game score</span></div></div>' +
+    '<table><tr><th>Player</th><th>Rack value</th><th>Tiles left</th><th>Game score</th><th>Session</th></tr>' + rows + '</table>' + bonus +
+    '<div class="btns"><button id="btnModalNew" class="primary">New Game</button><button id="btnModalClose" class="ghost">Review Table</button></div>';
+  $('modalWrap').classList.add('show');
+  $('btnModalNew').onclick = newGame;
+  $('btnModalClose').onclick = closeModal;
+}
+
+function onGameEnd() {
+  if (!game || !game.over) return;
+  var r = game.result;
+  session.games++;
+  for (var i = 0; i < game.players.length; i++) {
+    if (!session.per[i]) session.per[i] = { wins: 0, cum: 0, games: 0 };
+    session.per[i].games++;
+    session.per[i].cum += r.scores[i];
+    if (r.winnerIdx === i) session.per[i].wins++;
+  }
+  showGameOver();
+}
+
+/* ---------------- rendering ---------------- */
+function chip(label, value, cls) {
+  return '<span class="chip' + (cls ? ' ' + cls : '') + '">' + label + ' <b>' + value + '</b></span>';
+}
+function renderStatus() {
+  var el = $('status');
+  if (!game) {
+    el.innerHTML = chip('Phase', 'Ready', 'good') + chip('Players', $('players').value) +
+      chip('Session games', session.games);
+    return;
+  }
+  var tableTiles = 0;
+  game.table.forEach(function (s) { tableTiles += s.tiles.length; });
+  el.innerHTML =
+    chip('Phase', game.over ? 'Ended' : 'Running', game.over ? '' : 'good') +
+    chip('Turn', game.over ? game.turnNo : game.turnNo + 1) +
+    (game.over ? '' : '<span class="chip hot"><span class="dot"></span>Current <b>' + game.players[game.turnIdx].name + '</b></span>') +
+    chip('Pool', game.deck.length) +
+    chip('Table', game.table.length + ' sets / ' + tableTiles + ' tiles') +
+    chip('Draws', game.stats.draws) +
+    chip('Seed', esc(game.seed)) +
+    chip('Session games', session.games);
+}
+
+function renderPlayers() {
+  var el = $('playersCol');
+  if (!game) { el.innerHTML = '<div class="pcard"><div class="empty">Start a new game to deal the tiles.</div></div>'; return; }
+  var html = '';
+  for (var i = 0; i < game.players.length; i++) {
+    var p = game.players[i];
+    var cur = !game.over && game.turnIdx === i;
+    var s = session.per[i] || { wins: 0, cum: 0 };
+    var rack = '';
+    for (var t = 0; t < p.tiles.length; t++) rack += tileHtml(p.tiles[t], true, false);
+    if (!p.tiles.length) rack = '<span class="mini ok">RACK EMPTY</span>';
+    html +=
+      '<div class="pcard' + (cur ? ' turn' : '') + (game.over && game.result.winnerIdx === i ? ' winner' : '') + '">' +
+      '<div class="phead"><span class="pname">' + p.name + '</span><span class="ptag">AI</span>' +
+      '<span class="pturn">&#9679; TURN</span></div>' +
+      '<div class="pchips">' +
+      '<span class="mini' + (p.melded ? ' ok' : ' no') + '">' + (p.melded ? 'INITIAL MELD DONE' : 'NOT MELDED') + '</span>' +
+      '<span class="mini">Tiles: ' + p.tiles.length + '</span>' +
+      '<span class="mini score">Game: ' + fmtScore(p.score) + '</span>' +
+      '<span class="mini">Session: ' + fmtScore(s.cum) + ' &middot; ' + s.wins + 'W</span>' +
+      '</div><div class="rack">' + rack + '</div></div>';
+  }
+  el.innerHTML = html;
+}
+
+function renderTable() {
+  var el = $('melds'), info = $('tableInfo');
+  if (!game) { el.innerHTML = '<div class="empty">The table is empty — start a new game.</div>'; info.textContent = ''; return; }
+  if (!game.table.length) { el.innerHTML = '<div class="empty">No melds on the table yet — nobody has broken the ice.</div>'; }
+  else {
+    var html = '';
+    for (var i = 0; i < game.table.length; i++) html += setHtml(game.table[i]);
+    el.innerHTML = html;
+  }
+  var tiles = 0;
+  game.table.forEach(function (s) { tiles += s.tiles.length; });
+  info.textContent = game.table.length + ' sets &middot; ' + tiles + ' tiles';
+}
+
+function statRow(label, value) { return '<div class="statRow"><span>' + label + '</span><b>' + value + '</b></div>'; }
+function renderStats() {
+  var el = $('stats');
+  if (!game) { el.innerHTML = statRow('Waiting for a game', '—'); return; }
+  var st = game.stats;
+  el.innerHTML =
+    statRow('Turn number', game.turnNo) +
+    statRow('Tiles drawn', st.draws) +
+    statRow('Passes', st.passes) +
+    statRow('Joker retrievals', st.retrievals) +
+    statRow('Table manipulations', st.manipulations) +
+    statRow('Most tiles played in one turn', st.maxSinglePlay) +
+    statRow('Solver nodes', fmtK(st.solverNodes)) +
+    statRow('Solver time', (st.solverMs / 1000).toFixed(2) + ' s') +
+    statRow('Turns capped by budget', st.cappedTurns);
+}
+
+function renderSession() {
+  var el = $('sessionBody');
+  if (!session.games) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  var rows = '';
+  for (var i = 0; i < (game ? game.players.length : 4); i++) {
+    var s = session.per[i] || { wins: 0, cum: 0, games: 0 };
+    rows += '<tr' + (game && game.players.length > i && i === game.turnIdx ? ' class="me"' : '') + '><td>Player ' + (i + 1) + '</td>' +
+      '<td class="wins">' + s.wins + '</td><td>' + s.games + '</td><td class="pt">' + fmtScore(s.cum) + '</td></tr>';
+  }
+  el.innerHTML = '<table class="score"><tr><th>Player</th><th>Wins</th><th>Games</th><th>Points</th></tr>' + rows + '</table>';
+}
+
+function renderButtons() {
+  var canPlay = !!game && !game.over && !batch.running;
+  $('btnStep').disabled = !canPlay;
+  $('btnAuto').disabled = !canPlay;
+  $('btnNew').disabled = batch.running;
+  $('btnBatch').disabled = batch.running;
+  $('btnReset').disabled = batch.running;
+}
+
+function render() {
+  renderStatus(); renderPlayers(); renderTable(); renderStats(); renderSession(); renderButtons();
+  if (game && game.over) showGameOver();
+}
+
+/* ---------------- batch simulation ---------------- */
+function runBatch() {
+  var count = parseInt($('batchCount').value, 10) || 25;
+  var pc = game ? game.players.length : (parseInt($('players').value, 10) || 4);
+  batch.running = true; batch.cancel = false;
+  renderButtons();
+  $('btnBatchRun').style.display = 'none';
+  $('btnBatchCancel').style.display = '';
+  $('batchResults').innerHTML = '';
+  $('batchBar').style.width = '0%';
+
+  var match = RK.createMatch(pc);
+  var done = 0, t0 = Date.now();
+  var CHUNK_MS = 60;
+
+  function finish() {
+    batch.running = false;
+    $('btnBatchRun').style.display = '';
+    $('btnBatchCancel').style.display = 'none';
+    $('batchProgressLabel').textContent = 'Completed ' + match.games + ' games in ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s';
+    renderButtons();
+    renderBatchResults(match, pc);
+  }
+  function chunk() {
+    if (batch.cancel) { finish(); return; }
+    var start = Date.now();
+    while (done < count && Date.now() - start < CHUNK_MS) {
+      var g = new RK.Game({
+        players: pc,
+        seed: 'batch-' + t0 + '-' + done,
+        budget: RK.BATCH_BUDGET
+      });
+      g.runToEnd();
+      RK.addGameResult(match, g);
+      done++;
+    }
+    var pct = Math.round(done / count * 100);
+    $('batchBar').style.width = pct + '%';
+    $('batchProgressLabel').textContent = 'Running… ' + done + ' / ' + count + ' (' + pct + '%)';
+    if (done < count) setTimeout(chunk, 0);
+    else finish();
+  }
+  setTimeout(chunk, 0);
+}
+
+function renderBatchResults(match, pc) {
+  var rows = '';
+  for (var i = 0; i < pc; i++) {
+    var m = match.per[i];
+    rows += '<tr><td>Player ' + (i + 1) + '</td><td>' + m.wins + '</td><td>' +
+      (m.games ? (100 * m.wins / m.games).toFixed(0) : 0) + '%</td><td>' +
+      (m.games ? (m.cumScore / m.games).toFixed(1) : '—') + '</td><td>' +
+      (m.games ? (m.rackSum / m.games).toFixed(1) : '—') + '</td><td>' +
+      (m.games ? (100 * m.meldedGames / m.games).toFixed(0) : 0) + '%</td><td>' +
+      (m.meldedGames ? (m.meldTurnSum / m.meldedGames).toFixed(1) : '—') + '</td></tr>';
+  }
+  var stale = match.stalemates, winsN = match.games - stale;
+  $('batchResults').innerHTML =
+    '<table><tr><th>Player</th><th>Wins</th><th>Win rate</th><th>Avg score</th><th>Avg rack left</th><th>Melded</th><th>Avg meld turn</th></tr>' + rows + '</table>' +
+    '<div class="sub" style="margin-top:10px">Games: <b>' + match.games + '</b> &middot; avg turns: <b>' + match.avgTurns() +
+    '</b> &middot; ended by Rummikub: <b>' + winsN + '</b> &middot; stalemates: <b>' + stale +
+    '</b><br>Avg draws per game: <b>' + (match.games ? (match.draws / match.games).toFixed(1) : '—') +
+    '</b> &middot; avg joker retrievals: <b>' + (match.games ? (match.retrievals / match.games).toFixed(1) : '—') +
+    '</b> &middot; avg table manipulations: <b>' + (match.games ? (match.manipulations / match.games).toFixed(1) : '—') + '</b></div>';
+}
+
+/* ---------------- rules reference ---------------- */
+$('rulesBody').innerHTML =
+  '<h3>The Tiles</h3><div>106 tiles in total: numbers 1&ndash;13 in four colors ' +
+  '<span class="sw" style="background:var(--red)"></span>red, <span class="sw" style="background:var(--blue)"></span>blue, ' +
+  '<span class="sw" style="background:var(--orange)"></span>orange and <span class="sw" style="background:var(--black)"></span>black ' +
+  '(two copies of each), plus two jokers.</div>' +
+  '<h3>Setup</h3><div>2&ndash;4 players. Each player draws one tile; the highest number starts (drawing a joker or a tie forces a redraw). ' +
+  'All tiles go back, get reshuffled, and every player receives 14 tiles. The remaining tiles form the pool.</div>' +
+  '<h3>Goal</h3><div>Be the first player to empty your rack and call <b>&ldquo;Rummikub!&rdquo;</b></div>' +
+  '<h3>Valid Sets</h3><ul>' +
+  '<li><b>Group</b> — 3 or 4 tiles of the <b>same number</b> in <b>different colors</b>.</li>' +
+  '<li><b>Run</b> — 3 or more <b>consecutive numbers</b> of the <b>same color</b>. 1 is low, 13 is high, and runs never wrap (12&ndash;13&ndash;1 is invalid).</li></ul>' +
+  '<h3>Initial Meld</h3><div>Your first play must be worth <b>at least 30 points</b> and must use <b>only tiles from your own rack</b> ' +
+  '(one or more sets may be combined). A joker counts as the value of the tile it represents. Until your initial meld is down, ' +
+  'you may not touch the table.</div>' +
+  '<h3>Taking a Turn</h3><div>Either play one or more tiles (start new sets, add to existing sets, or freely rearrange the table), ' +
+  '<b>or</b> draw one tile from the pool — which immediately ends your turn. You may never play and draw in the same turn, and a joker ' +
+  'counts 30 points against you if it is still on your rack at the end of the game.</div>' +
+  '<h3>Table Manipulation</h3><div>After your initial meld you may rearrange the table in any way — split runs, borrow tiles from sets, ' +
+  'combine and rebuild sets — provided that:</div><ul>' +
+  '<li>every set on the table is <b>complete and valid</b> at the end of your turn;</li>' +
+  '<li>you play <b>at least one tile from your rack</b> during the turn;</li>' +
+  '<li>no tile ever <b>returns from the table to your rack</b>.</li></ul>' +
+  '<h3>Jokers</h3><div>A joker represents any tile. After the initial meld, a joker on the table may be <b>retrieved</b> by swapping in the tile ' +
+  'it represents (in a 3-tile group, any missing color of that number works). A retrieved joker <b>must be used on the table in the same turn</b> — ' +
+  'it can never be kept in hand.</div>' +
+  '<h3>End &amp; Scoring</h3><div>The first player to empty their rack wins. The winner scores the <b>sum of all opponents&rsquo; rack values</b>; ' +
+  'each loser scores the <b>negative</b> of their own rack value (jokers count 30). If the pool is empty and no player can move, the game ends: ' +
+  'the player with the <b>lowest rack value</b> wins and scores the sum of point differences over each opponent. Edge rule: a player who never ' +
+  'made the initial meld has their rack value added to every opponent&rsquo;s score.</div>' +
+  '<h3>About This Engine</h3><div>Every turn is solved with an exact-cover branch &amp; bound over required table tiles and available tiles ' +
+  '(table + rack), competing three strategies: incremental play, full table rearrangement, and joker retrieval. Think time is budget-capped, ' +
+  'and identical seeds replay identical games.</div>';
+
+/* ---------------- bindings ---------------- */
+$('btnNew').onclick = newGame;
+$('btnStep').onclick = function () { stopAuto(); step(); };
+$('btnAuto').onclick = function () { auto.on ? stopAuto() : startAuto(); };
+$('btnReset').onclick = function () { initSession(); render(); };
+$('btnClearLog').onclick = clearLog;
+$('speed').oninput = function () {
+  auto.delay = parseInt(this.value, 10);
+  $('speedVal').innerHTML = auto.delay + '&thinsp;ms';
+};
+$('players').onchange = function () { if (!game || game.over) renderStatus(); };
+$('btnBatch').onclick = function () { $('batchWrap').classList.add('show'); };
+$('btnBatchClose').onclick = function () {
+  if (batch.running) batch.cancel = true;
+  $('batchWrap').classList.remove('show');
+};
+$('btnBatchRun').onclick = runBatch;
+$('btnBatchCancel').onclick = function () { batch.cancel = true; };
+$('modalWrap').onclick = function (e) { if (e.target === this) closeModal(); };
+
+/* auto-create the first game */
+newGame();
+
+})();
+
+</script>
 </body>
 </html>
