@@ -145,6 +145,43 @@ main{display:grid; grid-template-columns:330px 1fr; gap:14px; align-items:start}
   color:var(--faint); background:var(--bg2); padding:0 6px; border-radius:4px; border:1px solid var(--line)}
 .empty{color:var(--faint); font-size:13px; padding:26px 10px; text-align:center; border:1px dashed var(--line); border-radius:10px; margin:10px 0}
 
+/* ---------- tile ownership (who played what) ---------- */
+.pdot{width:9px; height:9px; border-radius:3px; flex:none; box-shadow:0 0 5px rgba(0,0,0,.35)}
+.tile .ob{
+  position:absolute; top:1px; left:1px; width:12px; height:12px; border-radius:3px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:8.5px; font-weight:800; line-height:1; letter-spacing:0;
+  box-shadow:0 1px 2px rgba(0,0,0,.45); border:1px solid rgba(13,19,33,.85);
+  pointer-events:none; z-index:1;
+}
+.tile.ow0 .ob{background:#b06bf7; color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.4)}
+.tile.ow1 .ob{background:#17b3a0; color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.4)}
+.tile.ow2 .ob{background:#ef5fa7; color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.4)}
+.tile.ow3 .ob{background:#a8d63c; color:#1c3005}
+.tile.ow0.fresh{outline-color:#b06bf7}
+.tile.ow1.fresh{outline-color:#17b3a0}
+.tile.ow2.fresh{outline-color:#ef5fa7}
+.tile.ow3.fresh{outline-color:#a8d63c}
+#melds.focus0 .tile:not(.ow0),#melds.focus1 .tile:not(.ow1),
+#melds.focus2 .tile:not(.ow2),#melds.focus3 .tile:not(.ow3){opacity:.15; filter:grayscale(.85)}
+.ownerLegend{display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:9px 14px 0}
+.ownerLegend .cap{font-size:10px; font-weight:700; letter-spacing:1.2px; color:var(--faint)}
+.oleg{
+  display:inline-flex; align-items:center; gap:6px; font:inherit; font-size:11.5px; font-weight:600;
+  color:var(--muted); background:var(--panel2); border:1px solid var(--line); border-radius:999px;
+  padding:3px 10px; cursor:pointer; transition:all .15s ease;
+}
+.oleg:hover{color:var(--text); border-color:var(--pc)}
+.oleg.active{color:var(--text); border-color:var(--pc); box-shadow:0 0 0 1px var(--pc)}
+.oleg .swp{width:10px; height:10px; border-radius:3px; background:var(--pc); flex:none}
+.oleg b{font-variant-numeric:tabular-nums}
+.pcard[data-p="0"]{border-left-color:#b06bf7}
+.pcard[data-p="1"]{border-left-color:#17b3a0}
+.pcard[data-p="2"]{border-left-color:#ef5fa7}
+.pcard[data-p="3"]{border-left-color:#a8d63c}
+.pcard.winner{border-left-color:var(--good)}
+.mini.no{color:var(--accent2); border-color:rgba(246,168,33,.45)}
+
 /* ---------- bottom row ---------- */
 .bottom{display:grid; grid-template-columns:1fr 330px; gap:14px}
 @media(max-width:1400px){.bottom{grid-template-columns:1fr}}
@@ -159,7 +196,7 @@ main{display:grid; grid-template-columns:330px 1fr; gap:14px; align-items:start}
 .logLine.lg-draw{color:var(--info)}
 .logLine.lg-pass{color:var(--bad)}
 .logLine.lg-end{color:var(--good); font-weight:600; border-bottom:none; background:rgba(53,201,142,.07); border-radius:6px; padding:6px 8px; margin-top:4px}
-.logLine .pn0{color:#ff7b72} .logLine .pn1{color:#6cb2ff} .logLine .pn2{color:#ffb454} .logLine .pn3{color:#cdd7e8}
+.logLine .pn0{color:#c49bf8} .logLine .pn1{color:#4fe0cf} .logLine .pn2{color:#ff8ac2} .logLine .pn3{color:#cde98a}
 
 /* ---------- stats / rules ---------- */
 .statsBody{padding:4px 14px 12px}
@@ -212,7 +249,7 @@ footer{margin-top:20px; text-align:center; color:var(--faint); font-size:11px; l
   <header>
     <div class="brand"><span class="logo">Ru</span><h1>Rummikub <em>Simulator</em></h1></div>
   </header>
-  <div class="tagline">Official rules engine &mdash; <b>30-point initial meld</b> &middot; <b>full table manipulation</b> &middot; <b>joker retrieval</b> &middot; official end-game scoring &middot; exact-cover AI solver &middot; seeded replay &middot; batch analysis</div>
+  <div class="tagline">Official rules engine &mdash; <b>30-point initial meld (break the ice first)</b> &middot; <b>per-player tile ownership on the table</b> &middot; <b>full table manipulation</b> &middot; <b>joker retrieval</b> &middot; live rule verification &middot; official end-game scoring &middot; exact-cover AI solver &middot; seeded replay &middot; batch analysis</div>
 
   <section class="controls">
     <div class="btns">
@@ -242,7 +279,8 @@ footer{margin-top:20px; text-align:center; color:var(--faint); font-size:11px; l
 
     <section class="right">
       <div class="panel tablePanel">
-        <div class="panelHead"><h2>Table</h2><span class="sub" id="tableInfo"></span></div>
+        <div class="panelHead"><h2>Table</h2><button class="ghost small" id="btnOwners" title="Show or hide who played each tile">Owners: On</button><span class="sub" id="tableInfo"></span></div>
+        <div class="ownerLegend" id="ownerLegend"></div>
         <div class="meldsWrap"><div class="melds" id="melds"></div></div>
       </div>
 
@@ -815,6 +853,7 @@ function solveCover(req0, av0, opts) {
   var minHandPlays = opts.minHandPlays || 0;
 
   var nodes = 0, capped = false, best = null;
+  var bestAny = -1;      /* valueMode only: best meld value seen, even if < minValue */
   var chosen = [];
   var handUsed = 0, jokersUsed = 0, value = 0, optCount = 0, avVal = 0, reqSum = 0;
   var i, k;
@@ -940,6 +979,7 @@ function solveCover(req0, av0, opts) {
     } else {
       for (k = 0; k < 53; k++) if (av[k] > 0) { anchor = k; break; }
       if (anchor === -1) {
+        if (valueMode && value > bestAny) bestAny = value;
         if ((valueMode && value >= minValue) || (!valueMode && handUsed >= minHandPlays)) {
           if (isBetter()) best = { handUsed: handUsed, jokersUsed: jokersUsed, value: value, chosen: chosen.slice() };
         }
@@ -976,6 +1016,7 @@ function solveCover(req0, av0, opts) {
   }
   dfs();
   var res = { ok: !!best, nodes: nodes, ms: Date.now() - t0, capped: capped, searches: 1 };
+  if (valueMode) res.anyValue = bestAny;
   if (best) {
     res.chosen = best.chosen; res.handUsed = best.handUsed;
     res.jokersUsed = best.jokersUsed; res.value = best.value;
@@ -1270,6 +1311,8 @@ function Game(config) {
   this.result = null;
   this.firstPlayer = 0;
   this.firstDraws = null;
+  this.tileOwner = {};   /* tileId -> idx of the player who played it onto the table */
+  this.tileTurn = {};    /* tileId -> turn number on which it was played */
   this.stats = {
     draws: 0, passes: 0, retrievals: 0, manipulations: 0,
     maxSinglePlay: 0, solverNodes: 0, solverMs: 0, cappedTurns: 0, turnCount: 0
@@ -1398,8 +1441,10 @@ Game.prototype.step = function () {
   var t0 = Date.now();
 
   if (!p.melded) {
-    /* ---- Initial meld: rack tiles only, >= 30 points (a joker scores the
-     * face value of the tile it stands for) ---- */
+    /* ---- Initial meld (breaking the ice): rack tiles ONLY, total >= 30
+     * points (a joker scores the face value of the tile it stands for).
+     * The table may NOT be touched on this turn — the new sets are simply
+     * appended. Until this meld is made, no other form of play is legal. ---- */
     var sol = RK.solveCover(RK.emptyCounts(), RK.handCounts(p.tiles), {
       valueMode: true, minValue: RK.INITIAL_MELD_MIN,
       nodes: this.budget.nodes, timeMs: this.budget.timeMs
@@ -1407,27 +1452,35 @@ Game.prototype.step = function () {
     this.stats.solverNodes += sol.nodes;
     this.stats.solverMs += sol.ms;
     if (sol.capped) this.stats.cappedTurns++;
-    if (sol.ok && sol.value >= RK.INITIAL_MELD_MIN) {
-      var mat = RK.materialize(sol, [], p.tiles, null);
-      if (mat) {
-        RK.applyRoles(mat.roles); /* commit: write the joker roles */
-        /* The initial-meld sets are appended to the table (they may not
-         * cover sets already played by other players) */
-        this.table = this.table.concat(mat.sets);
-        p.tiles = mat.hand;
-        p.melded = true;
-        p.meldTurn = this.turnNo;
-        p.meldValue = sol.value;
-        this.passStreak = 0;
-        ev.type = 'meld';
-        ev.value = sol.value;
-        ev.playedIds = mat.playedIds;
-        ev.handAfter = p.tiles.length;
-        ev.solver = { nodes: sol.nodes, ms: sol.ms, capped: sol.capped };
-      } else {
-        this._drawOrPass(p, ev);
+    var mat = null;
+    if (sol.ok && sol.value >= RK.INITIAL_MELD_MIN) mat = RK.materialize(sol, [], p.tiles, null);
+    if (mat) {
+      RK.applyRoles(mat.roles); /* commit: write the joker roles */
+      var playedSet = Object.create(null), oi;
+      for (oi = 0; oi < mat.playedIds.length; oi++) playedSet[mat.playedIds[oi]] = 1;
+      ev.playedTiles = p.tiles.filter(function (t) { return playedSet[t.id]; });
+      for (oi = 0; oi < mat.playedIds.length; oi++) {
+        this.tileOwner[mat.playedIds[oi]] = p.idx;
+        this.tileTurn[mat.playedIds[oi]] = this.turnNo;
       }
+      /* The initial-meld sets are appended to the table (existing sets
+       * stay untouched on the initial-meld turn) */
+      this.table = this.table.concat(mat.sets);
+      p.tiles = mat.hand;
+      p.melded = true;
+      p.meldTurn = this.turnNo;
+      p.meldValue = sol.value;
+      this.passStreak = 0;
+      ev.type = 'meld';
+      ev.value = sol.value;
+      ev.playedIds = mat.playedIds;
+      ev.handAfter = p.tiles.length;
+      ev.solver = { nodes: sol.nodes, ms: sol.ms, capped: sol.capped };
     } else {
+      /* Cannot reach 30 points yet — expose the best attempt for the log */
+      if (!sol.ok && !sol.capped && sol.anyValue != null && sol.anyValue >= 0) {
+        ev.meldShort = sol.anyValue;
+      }
       this._drawOrPass(p, ev);
     }
   } else {
@@ -1445,6 +1498,18 @@ Game.prototype.step = function () {
       this.stats.solverMs += plan.stats.ms;
       var played = plan.playedIds.length;
       if (played > this.stats.maxSinglePlay) this.stats.maxSinglePlay = played;
+      var playedSet2 = Object.create(null), oi2;
+      for (oi2 = 0; oi2 < plan.playedIds.length; oi2++) playedSet2[plan.playedIds[oi2]] = 1;
+      ev.playedTiles = p.tiles.filter(function (t) { return playedSet2[t.id]; });
+      for (oi2 = 0; oi2 < plan.playedIds.length; oi2++) {
+        this.tileOwner[plan.playedIds[oi2]] = p.idx;
+        this.tileTurn[plan.playedIds[oi2]] = this.turnNo;
+      }
+      if (plan.retrieval) {
+        /* the retrieved joker has been replayed by this player — update ownership */
+        this.tileOwner[plan.retrieval.J.id] = p.idx;
+        this.tileTurn[plan.retrieval.J.id] = this.turnNo;
+      }
       this.table = plan.table;
       p.tiles = plan.hand;
       this.passStreak = 0;
@@ -1481,6 +1546,51 @@ Game.prototype.runToEnd = function () {
     this._finish('stalemate', this._stalemateWinner());
   }
   return this.result;
+};
+
+/* ---------- Rule-invariant validation (re-checked after every turn) ----------
+ * Certifies that the official rules hold in the live game state:
+ *  - every set on the table is a legal group/run of 3+ tiles;
+ *  - exactly 106 unique tiles exist across table, racks and pool (no tile
+ *    ever duplicated or lost, so no table tile can sneak back to a rack);
+ *  - every table tile has a recorded owner (who played it);
+ *  - every melded player has a >= 30-point initial meld on record.
+ * Returns an array of error strings; empty array = all invariants hold. */
+RK.validateGame = function (game) {
+  var errs = [], i, j;
+  for (i = 0; i < game.table.length; i++) {
+    var s = game.table[i];
+    var a = RK.analyzeSet(s.tiles);
+    if (!a.valid || s.tiles.length < 3) {
+      errs.push('invalid set on the table: [' + s.tiles.map(RK.tileLabel).join(' ') + ']');
+    }
+    for (j = 0; j < s.tiles.length; j++) {
+      if (game.tileOwner[s.tiles[j].id] == null) {
+        errs.push('table tile without a recorded owner: ' + RK.tileLabel(s.tiles[j]));
+      }
+    }
+  }
+  var seen = Object.create(null), total = 0;
+  function collect(arr, where) {
+    for (var q = 0; q < arr.length; q++) {
+      total++;
+      if (seen[arr[q].id]) errs.push('tile ' + arr[q].id + ' appears in both ' + seen[arr[q].id] + ' and ' + where);
+      seen[arr[q].id] = where;
+    }
+  }
+  for (i = 0; i < game.table.length; i++) collect(game.table[i].tiles, 'the table');
+  for (i = 0; i < game.players.length; i++) collect(game.players[i].tiles, game.players[i].name + "'s rack");
+  collect(game.deck, 'the pool');
+  if (total !== RK.TILE_COUNT) {
+    errs.push('tile conservation broken: ' + total + ' tiles (expected ' + RK.TILE_COUNT + ')');
+  }
+  for (i = 0; i < game.players.length; i++) {
+    var pp = game.players[i];
+    if (pp.melded && pp.meldValue < RK.INITIAL_MELD_MIN) {
+      errs.push(pp.name + ' is marked melded with only ' + pp.meldValue + ' points');
+    }
+  }
+  return errs;
 };
 
 RK.Game = Game;
@@ -1553,6 +1663,10 @@ var batch = { running: false, cancel: false };
 var lastPlayedIds = null;
 var endedLogged = false;
 var GAME_BUDGET = { nodes: 40000, timeMs: 120 };
+var showOwners = true;      /* display per-tile owner badges on the table */
+var focusOwner = -1;        /* pinned owner highlight (-1 = none) */
+var lastRuleErrors = null;  /* outcome of the most recent rule-invariant check */
+var PCOLORS = ['#b06bf7', '#17b3a0', '#ef5fa7', '#a8d63c'];
 
 function initSession() {
   session = { games: 0, per: [] };
@@ -1568,15 +1682,22 @@ function avg(arr) { return arr && arr.length ? arr.reduce(function (a, b) { retu
 function colorInitial(c) { return ['R', 'B', 'O', 'K'][c] || '?'; }
 
 /* ---------------- tile / set rendering ---------------- */
-function tileHtml(t, small, highlight) {
+function tileHtml(t, small, highlight, owner, ownerTurn) {
+  var owCls = '', badge = '', own = '';
+  if (owner != null && owner >= 0 && game) {
+    owCls = ' ow' + owner;
+    own = ' — played by ' + game.players[owner].name +
+      (ownerTurn ? ' on turn #' + ownerTurn : '');
+    if (showOwners) badge = '<span class="ob">' + (owner + 1) + '</span>';
+  }
   if (t.joker) {
     var role = t.jokerAs ? (t.jokerAs.n + colorInitial(t.jokerAs.c)) : '';
-    return '<span class="tile jk' + (highlight ? ' fresh' : '') + '" title="' +
+    return '<span class="tile jk' + owCls + (highlight ? ' fresh' : '') + '" title="' +
       (t.jokerAs ? ('Joker representing ' + t.jokerAs.n + ' ' + RK.COLOR_EN[t.jokerAs.c]) : 'Joker (wild)') +
-      '">&#9733;' + (role ? '<i>' + role + '</i>' : '') + '</span>';
+      own + '">&#9733;' + (role ? '<i>' + role + '</i>' : '') + badge + '</span>';
   }
-  return '<span class="tile c' + t.color + (highlight ? ' fresh' : '') + '" title="' +
-    RK.tileLabel(t) + '">' + t.num + '</span>';
+  return '<span class="tile c' + t.color + owCls + (highlight ? ' fresh' : '') + '" title="' +
+    RK.tileLabel(t) + own + '">' + t.num + badge + '</span>';
 }
 function setHtml(s) {
   var a = RK.analyzeSet(s.tiles);
@@ -1585,7 +1706,9 @@ function setHtml(s) {
   var inner = '';
   for (var i = 0; i < s.tiles.length; i++) {
     var t = s.tiles[i];
-    inner += tileHtml(t, false, lastPlayedIds && lastPlayedIds.indexOf(t.id) >= 0);
+    inner += tileHtml(t, false, lastPlayedIds && lastPlayedIds.indexOf(t.id) >= 0,
+      game && game.tileOwner ? game.tileOwner[t.id] : null,
+      game && game.tileTurn ? game.tileTurn[t.id] : 0);
   }
   return '<div class="set ' + (a.type || '') + '" title="' + tip + '"><span class="setInfo">' + info + '</span>' + inner + '</div>';
 }
@@ -1610,20 +1733,31 @@ function logEvent(ev) {
   if (!ev) return;
   var tag = turnTag(ev.turn);
   if (ev.type === 'meld') {
-    logLine(tag + pn(ev.player) + ' makes the <b>initial meld</b> — ' + ev.value +
-      ' points, ' + ev.playedIds.length + ' tile' + (ev.playedIds.length > 1 ? 's' : '') +
-      ' from the rack. Initial meld requirement (30) met.', 'lg-turn lg-meld');
+    logLine(tag + pn(ev.player) + ' <b>breaks the ice</b> — initial meld worth <b>' + ev.value +
+      ' points</b>, ' + ev.playedIds.length + ' tile' + (ev.playedIds.length > 1 ? 's' : '') +
+      ' from the rack (' + RK.INITIAL_MELD_MIN + ' required).', 'lg-turn lg-meld');
   } else if (ev.type === 'play') {
     var n = ev.playedIds.length;
     var bits = [];
     if (ev.retrieval) bits.push('retrieves a joker from the table');
     if (ev.manipulated) bits.push('rearranges the table');
     var tail = bits.length ? ' — ' + bits.join(', ') : '';
+    var tileList = '';
+    if (ev.playedTiles && ev.playedTiles.length) {
+      var tl = ev.playedTiles.map(RK.tileLabel);
+      if (tl.length > 8) tl = tl.slice(0, 8).concat(['+' + (tl.length - 8) + ' more']);
+      tileList = ': ' + tl.join(', ');
+    }
     logLine(tag + pn(ev.player) + ' plays <b>' + n + '</b> tile' + (n > 1 ? 's' : '') +
-      ' from the rack' + tail + '.', 'lg-turn');
+      ' from the rack' + tileList + tail + '.', 'lg-turn');
   } else if (ev.type === 'draw') {
+    var iceNote = '';
+    if (game && !game.players[ev.player].melded) {
+      iceNote = ' — ice not broken yet (no ' + RK.INITIAL_MELD_MIN + '-point meld available' +
+        (ev.meldShort != null ? '; best found this turn: ' + ev.meldShort + ' pts' : '') + ')';
+    }
     logLine(tag + pn(ev.player) + ' cannot play and draws the ' + RK.tileLabel(ev.tile) +
-      ' (' + game.deck.length + ' left in the pool).', 'lg-draw');
+      ' (' + game.deck.length + ' left in the pool)' + iceNote + '.', 'lg-draw');
   } else if (ev.type === 'pass') {
     logLine(tag + pn(ev.player) + ' passes — no legal move, the pool is empty.', 'lg-pass');
   }
@@ -1660,6 +1794,8 @@ function newGame() {
   stopAuto();
   endedLogged = false;
   lastPlayedIds = null;
+  focusOwner = -1;
+  lastRuleErrors = null;
   closeModal();
   var players = parseInt($('players').value, 10) || 4;
   var seed = $('seed').value.trim() || ('auto-' + new Date().toISOString().slice(0, 19).replace(/[:T-]/g, ''));
@@ -1681,9 +1817,16 @@ function step() {
   var setsBefore = game.table.length;
   var ev = game.step();
   lastPlayedIds = ev && ev.playedIds ? ev.playedIds : null;
+  /* re-validate every official-rule invariant after each turn */
+  var errs = RK.validateGame(game);
+  lastRuleErrors = errs;
+  for (var e = 0; e < errs.length; e++) logLine('RULE VIOLATION — ' + esc(errs[e]), 'lg-pass');
   if (ev && ev.type === 'meld') {
-    logLine('<span class="turnNo"></span>Initial meld added ' + (game.table.length - setsBefore) +
-      ' new set' + ((game.table.length - setsBefore) > 1 ? 's' : '') + ' to the table.', '');
+    var newSets = game.table.slice(setsBefore);
+    var labels = newSets.map(RK.setLabel);
+    if (labels.length > 3) labels = labels.slice(0, 3).concat('+' + (labels.length - 3) + ' more');
+    logLine('<span class="turnNo"></span>Initial meld placed ' + newSets.length + ' new set' +
+      (newSets.length > 1 ? 's' : '') + ' on the table: ' + labels.join(' + '), '');
   }
   if (ev && ev.gameEnd) onGameEnd();   /* session totals + modal before final log lines */
   logEvent(ev);
@@ -1717,12 +1860,14 @@ function closeModal() { $('modalWrap').classList.remove('show'); }
 function showGameOver() {
   if (!game || !game.over) return;
   var r = game.result, w = r.winnerIdx;
+  var onTable = ownedCounts();
   var rows = '';
   for (var i = 0; i < game.players.length; i++) {
     var p = game.players[i];
     var sTotal = session.per[i] ? session.per[i].cum : 0;
-    rows += '<tr' + (i === w ? ' class="win"' : '') + '><td>' + p.name + '</td><td>' + r.racks[i] +
-      '</td><td>' + p.tiles.length + '</td><td>' + fmtScore(r.scores[i]) + '</td><td>' + fmtScore(sTotal) + '</td></tr>';
+    rows += '<tr' + (i === w ? ' class="win"' : '') + '><td>' + p.name + '</td><td>' + onTable[i] +
+      '</td><td>' + r.racks[i] + '</td><td>' + p.tiles.length + '</td><td>' + fmtScore(r.scores[i]) +
+      '</td><td>' + fmtScore(sTotal) + '</td></tr>';
   }
   var bonus = '';
   for (var b = 0; b < r.bonus.length; b++) {
@@ -1737,7 +1882,7 @@ function showGameOver() {
     ' &middot; ' + r.turns + ' turns &middot; seed ' + esc(r.seed) + '</div>' +
     '<div class="banScore"><span class="big">' + (r.scores[w] > 0 ? '+' : '') + r.scores[w] + '</span><div><b>' +
     game.players[w].name + '</b> wins<br><span style="color:var(--muted);font-size:12px">winner\'s game score</span></div></div>' +
-    '<table><tr><th>Player</th><th>Rack value</th><th>Tiles left</th><th>Game score</th><th>Session</th></tr>' + rows + '</table>' + bonus +
+    '<table><tr><th>Player</th><th>Played to table</th><th>Rack value</th><th>Tiles left</th><th>Game score</th><th>Session</th></tr>' + rows + '</table>' + bonus +
     '<div class="btns"><button id="btnModalNew" class="primary">New Game</button><button id="btnModalClose" class="ghost">Review Table</button></div>';
   $('modalWrap').classList.add('show');
   $('btnModalNew').onclick = newGame;
@@ -1757,6 +1902,44 @@ function onGameEnd() {
   showGameOver();
 }
 
+/* ---------------- ownership helpers ---------------- */
+function ownedCounts() {
+  var counts = [0, 0, 0, 0];
+  if (!game) return counts;
+  game.table.forEach(function (s) {
+    s.tiles.forEach(function (t) {
+      var o = game.tileOwner ? game.tileOwner[t.id] : null;
+      if (o != null && o >= 0) counts[o]++;
+    });
+  });
+  return counts;
+}
+
+function setFocus(p) {
+  var el = $('melds');
+  for (var i = 0; i < 4; i++) el.classList.remove('focus' + i);
+  if (p != null && p >= 0) el.classList.add('focus' + p);
+  var chips = document.querySelectorAll('.oleg');
+  for (var c = 0; c < chips.length; c++) {
+    chips[c].classList[(parseInt(chips[c].getAttribute('data-p'), 10) === p) ? 'add' : 'remove']('active');
+  }
+}
+
+function bindLegend() {
+  var chips = document.querySelectorAll('.oleg');
+  for (var i = 0; i < chips.length; i++) {
+    (function (el) {
+      var p = parseInt(el.getAttribute('data-p'), 10);
+      el.onclick = function () {
+        focusOwner = (focusOwner === p) ? -1 : p;
+        renderTable();
+      };
+      el.onmouseenter = function () { setFocus(p); };
+      el.onmouseleave = function () { setFocus(focusOwner); };
+    })(chips[i]);
+  }
+}
+
 /* ---------------- rendering ---------------- */
 function chip(label, value, cls) {
   return '<span class="chip' + (cls ? ' ' + cls : '') + '">' + label + ' <b>' + value + '</b></span>';
@@ -1770,12 +1953,17 @@ function renderStatus() {
   }
   var tableTiles = 0;
   game.table.forEach(function (s) { tableTiles += s.tiles.length; });
+  var meldedN = 0;
+  game.players.forEach(function (pp) { if (pp.melded) meldedN++; });
   el.innerHTML =
     chip('Phase', game.over ? 'Ended' : 'Running', game.over ? '' : 'good') +
     chip('Turn', game.over ? game.turnNo : game.turnNo + 1) +
     (game.over ? '' : '<span class="chip hot"><span class="dot"></span>Current <b>' + game.players[game.turnIdx].name + '</b></span>') +
+    chip('Ice broken', meldedN + '/' + game.players.length, meldedN === game.players.length ? 'good' : 'hot') +
     chip('Pool', game.deck.length) +
     chip('Table', game.table.length + ' sets / ' + tableTiles + ' tiles') +
+    (lastRuleErrors == null ? '' :
+      chip('Rules', lastRuleErrors.length ? 'VIOLATION' : 'verified', lastRuleErrors.length ? '' : 'good')) +
     chip('Draws', game.stats.draws) +
     chip('Seed', esc(game.seed)) +
     chip('Session games', session.games);
@@ -1784,6 +1972,7 @@ function renderStatus() {
 function renderPlayers() {
   var el = $('playersCol');
   if (!game) { el.innerHTML = '<div class="pcard"><div class="empty">Start a new game to deal the tiles.</div></div>'; return; }
+  var onTable = ownedCounts();
   var html = '';
   for (var i = 0; i < game.players.length; i++) {
     var p = game.players[i];
@@ -1793,12 +1982,14 @@ function renderPlayers() {
     for (var t = 0; t < p.tiles.length; t++) rack += tileHtml(p.tiles[t], true, false);
     if (!p.tiles.length) rack = '<span class="mini ok">RACK EMPTY</span>';
     html +=
-      '<div class="pcard' + (cur ? ' turn' : '') + (game.over && game.result.winnerIdx === i ? ' winner' : '') + '">' +
-      '<div class="phead"><span class="pname">' + p.name + '</span><span class="ptag">AI</span>' +
+      '<div class="pcard' + (cur ? ' turn' : '') + (game.over && game.result.winnerIdx === i ? ' winner' : '') + '" data-p="' + i + '">' +
+      '<div class="phead"><span class="pdot" style="background:' + PCOLORS[i] + '"></span><span class="pname">' + p.name + '</span><span class="ptag">AI</span>' +
       '<span class="pturn">&#9679; TURN</span></div>' +
       '<div class="pchips">' +
-      '<span class="mini' + (p.melded ? ' ok' : ' no') + '">' + (p.melded ? 'INITIAL MELD DONE' : 'NOT MELDED') + '</span>' +
+      '<span class="mini' + (p.melded ? ' ok' : ' no') + '" title="A 30+ point initial meld from the rack unlocks normal play">' +
+      (p.melded ? ('ICE BROKEN &middot; ' + p.meldValue + ' pts &middot; T#' + p.meldTurn) : 'ICE LOCKED &middot; needs ' + RK.INITIAL_MELD_MIN + ' pts') + '</span>' +
       '<span class="mini">Tiles: ' + p.tiles.length + '</span>' +
+      '<span class="mini" title="Tiles this player has played onto the table">On table: ' + onTable[i] + '</span>' +
       '<span class="mini score">Game: ' + fmtScore(p.score) + '</span>' +
       '<span class="mini">Session: ' + fmtScore(s.cum) + ' &middot; ' + s.wins + 'W</span>' +
       '</div><div class="rack">' + rack + '</div></div>';
@@ -1807,17 +1998,33 @@ function renderPlayers() {
 }
 
 function renderTable() {
-  var el = $('melds'), info = $('tableInfo');
-  if (!game) { el.innerHTML = '<div class="empty">The table is empty — start a new game.</div>'; info.textContent = ''; return; }
-  if (!game.table.length) { el.innerHTML = '<div class="empty">No melds on the table yet — nobody has broken the ice.</div>'; }
-  else {
+  var el = $('melds'), info = $('tableInfo'), leg = $('ownerLegend');
+  if (!game) {
+    el.innerHTML = '<div class="empty">The table is empty — start a new game.</div>';
+    info.textContent = ''; leg.innerHTML = ''; setFocus(-1); return;
+  }
+  if (!game.table.length) {
+    el.innerHTML = '<div class="empty">No melds on the table yet — nobody has broken the ice (the initial meld needs ' +
+      RK.INITIAL_MELD_MIN + '+ points from the rack).</div>';
+  } else {
     var html = '';
     for (var i = 0; i < game.table.length; i++) html += setHtml(game.table[i]);
     el.innerHTML = html;
   }
   var tiles = 0;
   game.table.forEach(function (s) { tiles += s.tiles.length; });
-  info.textContent = game.table.length + ' sets &middot; ' + tiles + ' tiles';
+  info.textContent = game.table.length + ' sets · ' + tiles + ' tiles';
+  /* ownership legend: who has how many tiles on the table */
+  var counts = ownedCounts();
+  var lh = '<span class="cap">PLAYED BY</span>';
+  for (var p = 0; p < game.players.length; p++) {
+    lh += '<button class="oleg" data-p="' + p + '" style="--pc:' + PCOLORS[p] + '"' +
+      ' title="Highlight the tiles this player put on the table (click to pin, click again to release)">' +
+      '<span class="swp"></span>' + esc(game.players[p].name) + ' <b>' + counts[p] + '</b></button>';
+  }
+  leg.innerHTML = lh;
+  bindLegend();
+  setFocus(focusOwner);
 }
 
 function statRow(label, value) { return '<div class="statRow"><span>' + label + '</span><b>' + value + '</b></div>'; }
@@ -1962,7 +2169,11 @@ $('rulesBody').innerHTML =
   'made the initial meld has their rack value added to every opponent&rsquo;s score.</div>' +
   '<h3>About This Engine</h3><div>Every turn is solved with an exact-cover branch &amp; bound over required table tiles and available tiles ' +
   '(table + rack), competing three strategies: incremental play, full table rearrangement, and joker retrieval. Think time is budget-capped, ' +
-  'and identical seeds replay identical games.</div>';
+  'and identical seeds replay identical games.</div>' +
+  '<h3>Ownership Display</h3><div>Every tile on the table carries a small numbered badge in its owner&rsquo;s color showing which player played it. ' +
+  'Use the legend above the table (or click a legend chip) to highlight one player&rsquo;s tiles; hover a tile to see the exact turn on which it was played. ' +
+  'After every turn the engine re-validates all rule invariants (set legality, 106-tile conservation, ownership bookkeeping, the 30-point ' +
+  'initial-meld requirement) — the &ldquo;Rules&rdquo; chip in the status bar reports the outcome.</div>';
 
 /* ---------------- bindings ---------------- */
 $('btnNew').onclick = newGame;
@@ -1970,6 +2181,11 @@ $('btnStep').onclick = function () { stopAuto(); step(); };
 $('btnAuto').onclick = function () { auto.on ? stopAuto() : startAuto(); };
 $('btnReset').onclick = function () { initSession(); render(); };
 $('btnClearLog').onclick = clearLog;
+$('btnOwners').onclick = function () {
+  showOwners = !showOwners;
+  this.textContent = 'Owners: ' + (showOwners ? 'On' : 'Off');
+  renderTable();
+};
 $('speed').oninput = function () {
   auto.delay = parseInt(this.value, 10);
   $('speedVal').innerHTML = auto.delay + '&thinsp;ms';
